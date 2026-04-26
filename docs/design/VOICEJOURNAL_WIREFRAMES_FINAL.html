@@ -1,0 +1,1413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoiceJournal Wireframes</title>
+  <style>
+    :root {
+      --paper: #f3efe8;
+      --canvas: #ebe4d9;
+      --ink: #191919;
+      --muted: #5d5a55;
+      --line: #c9c0b4;
+      --panel: #fbf9f5;
+      --panel-2: #f5f1ea;
+      --accent: #3f5fd8;
+      --accent-quiet: rgba(63,95,216,0.10);
+      --success: #4f8e66;
+      --warm: #d9c4a2;
+      --shadow: 0 20px 50px rgba(28, 20, 10, 0.08);
+      --radius: 20px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
+      --wire: #7f7465;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.75), transparent 34%),
+        linear-gradient(180deg, #f9f6f1 0%, var(--paper) 42%, var(--canvas) 100%);
+    }
+
+    .page {
+      width: min(1480px, calc(100vw - 48px));
+      margin: 24px auto 80px;
+    }
+
+    .hero {
+      padding: 40px 42px 34px;
+      border: 1px solid rgba(84, 71, 54, 0.15);
+      border-radius: 28px;
+      background: rgba(255,255,255,0.66);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    h1 {
+      font-size: 52px;
+      line-height: 1;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      font-size: 28px;
+      margin-bottom: 18px;
+    }
+
+    h3 {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    h4 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    p, li {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .hero p {
+      max-width: 960px;
+      font-size: 18px;
+      line-height: 1.65;
+      color: #403a33;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(63,95,216,0.08);
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .section {
+      margin-top: 26px;
+      padding: 30px;
+      border-radius: 26px;
+      border: 1px solid rgba(84, 71, 54, 0.14);
+      background: rgba(255,255,255,0.7);
+      box-shadow: var(--shadow);
+    }
+
+    .research-grid,
+    .iteration-grid,
+    .platform-grid,
+    .screen-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .research-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .iteration-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .platform-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .screen-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .card {
+      padding: 18px;
+      border: 1px solid rgba(84, 71, 54, 0.14);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245,241,234,0.88));
+    }
+
+    .card ul {
+      padding-left: 18px;
+      margin: 12px 0 0;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .tag {
+      padding: 6px 10px;
+      border: 1px solid rgba(84, 71, 54, 0.15);
+      border-radius: 999px;
+      background: var(--panel);
+      color: #403a33;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      color: #3e3a34;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .flow span {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid rgba(84, 71, 54, 0.12);
+    }
+
+    .arrow { color: #8f8475; }
+
+    .screen {
+      min-height: 700px;
+      border-radius: 24px;
+      border: 1px solid rgba(84, 71, 54, 0.2);
+      background: #faf8f4;
+      box-shadow: 0 24px 50px rgba(28,20,10,0.10);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .screen.compact { min-height: 620px; }
+    .screen.dark {
+      background: #181b21;
+      color: #eef0f3;
+      border-color: rgba(255,255,255,0.08);
+      box-shadow: 0 24px 50px rgba(0,0,0,0.35);
+    }
+
+    .chrome {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(84,71,54,0.12);
+      background: rgba(255,255,255,0.72);
+    }
+
+    .screen.dark .chrome {
+      background: rgba(29,32,40,0.94);
+      border-bottom-color: rgba(255,255,255,0.06);
+    }
+
+    .traffic {
+      display: flex;
+      gap: 6px;
+      margin-right: 6px;
+    }
+
+    .traffic span {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .traffic .r { background: #ff5f57; }
+    .traffic .y { background: #febc2e; }
+    .traffic .g { background: #28c840; }
+
+    .title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #453d35;
+      white-space: nowrap;
+    }
+
+    .screen.dark .title { color: #f1f3f6; }
+
+    .ghost,
+    .chip,
+    .pill,
+    .toolbar-button,
+    .entry-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .ghost {
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid rgba(84,71,54,0.13);
+      background: rgba(255,255,255,0.72);
+      color: #4a4238;
+    }
+
+    .screen.dark .ghost {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #dce1e6;
+    }
+
+    .toolbar-button {
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(84,71,54,0.13);
+      background: rgba(255,255,255,0.72);
+      color: #4a4238;
+      border-radius: 10px;
+    }
+
+    .screen.dark .toolbar-button {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #dce1e6;
+    }
+
+    .entry-button {
+      height: 36px;
+      padding: 0 14px;
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 10px 18px rgba(63,95,216,0.18);
+    }
+
+    .pill {
+      height: 32px;
+      padding: 0 14px;
+      background: var(--accent-quiet);
+      color: #2d4fca;
+      border: 1px solid rgba(63,95,216,0.14);
+    }
+
+    .screen.dark .pill {
+      background: rgba(154,166,255,0.24);
+      color: #dbe1ff;
+      border-color: rgba(154,166,255,0.24);
+    }
+
+    .chip {
+      height: 28px;
+      padding: 0 12px;
+      background: var(--panel-2);
+      border: 1px solid rgba(84,71,54,0.12);
+      color: #51493f;
+    }
+
+    .screen-body {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      flex: 1;
+    }
+
+    .panel-box,
+    .calendar,
+    .entry-list,
+    .editor,
+    .photo-strip,
+    .settings-shell,
+    .lightbox-frame,
+    .transcript-box {
+      border: 1.5px solid rgba(127,116,101,0.35);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.62);
+    }
+
+    .screen.dark .panel-box,
+    .screen.dark .calendar,
+    .screen.dark .entry-list,
+    .screen.dark .editor,
+    .screen.dark .photo-strip,
+    .screen.dark .settings-shell,
+    .screen.dark .transcript-box,
+    .screen.dark .lightbox-frame {
+      background: rgba(255,255,255,0.03);
+      border-color: rgba(255,255,255,0.10);
+    }
+
+    .calendar {
+      padding: 14px;
+    }
+
+    .month-row,
+    .weekday-row,
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .month-row {
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+
+    .month-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .weekday-row {
+      margin-bottom: 8px;
+      color: #7d7367;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .day {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      border: 1px solid rgba(84,71,54,0.10);
+      background: rgba(255,255,255,0.82);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      font-size: 12px;
+      color: #4c4339;
+      position: relative;
+      gap: 4px;
+    }
+
+    .day.selected {
+      background: rgba(63,95,216,0.14);
+      border-color: rgba(63,95,216,0.25);
+      color: #2849c6;
+      font-weight: 700;
+    }
+
+    .day .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .day.heat-2 { background: rgba(63,95,216,0.05); }
+    .day.heat-3 { background: rgba(63,95,216,0.09); }
+
+    .search {
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid rgba(84,71,54,0.14);
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      color: #7e7468;
+      font-size: 13px;
+    }
+
+    .entry-list {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .entry-row {
+      min-height: 86px;
+      border-radius: 16px;
+      border: 1px solid rgba(84,71,54,0.10);
+      background: rgba(255,255,255,0.76);
+      padding: 14px 14px 12px;
+      display: grid;
+      grid-template-columns: 12px 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .entry-row .mood {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      margin-top: 7px;
+    }
+
+    .entry-row .entry-title {
+      font-weight: 700;
+      color: #27211a;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .entry-row .snippet,
+    .entry-row .meta {
+      font-size: 12px;
+      color: #7b7166;
+      line-height: 1.4;
+    }
+
+    .cta-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: auto;
+    }
+
+    .orb-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-height: 220px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(63,95,216,0.05), rgba(63,95,216,0.01));
+      border: 1px dashed rgba(63,95,216,0.20);
+    }
+
+    .screen.dark .orb-stage {
+      background: linear-gradient(180deg, rgba(154,166,255,0.08), rgba(154,166,255,0.02));
+      border-color: rgba(154,166,255,0.16);
+    }
+
+    .orb {
+      width: 144px;
+      height: 144px;
+      border-radius: 50%;
+      border: 4px solid rgba(126,123,165,0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.95), rgba(245,241,234,0.85));
+      box-shadow: 0 22px 36px rgba(63,95,216,0.08);
+      position: relative;
+    }
+
+    .orb::after {
+      content: "";
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(225,75,75,0.88);
+      box-shadow: 0 0 0 12px rgba(225,75,75,0.08);
+    }
+
+    .orb.muted::after {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, #707793, #a1a2cb);
+      box-shadow: none;
+      clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%);
+    }
+
+    .state-copy {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .state-copy strong {
+      font-size: 16px;
+      color: #2e2a25;
+    }
+
+    .state-copy span {
+      font-size: 12px;
+      color: #6d655b;
+    }
+
+    .transcript-box {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .turn {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(84,71,54,0.10);
+      font-size: 12px;
+      line-height: 1.45;
+      color: #4c4338;
+    }
+
+    .turn strong { color: #27211a; }
+
+    .editor {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 310px;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .editor-line,
+    .meta-line,
+    .article-line {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(83, 73, 61, 0.12);
+    }
+
+    .editor-line.w1, .article-line.w1 { width: 100%; }
+    .editor-line.w2, .article-line.w2 { width: 92%; }
+    .editor-line.w3, .article-line.w3 { width: 84%; }
+    .editor-line.w4, .article-line.w4 { width: 72%; }
+    .article-line { height: 12px; background: rgba(83,73,61,0.10); }
+
+    .photo-strip {
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .thumb {
+      width: 74px;
+      height: 74px;
+      border-radius: 14px;
+      border: 1px dashed rgba(84,71,54,0.24);
+      background: linear-gradient(135deg, rgba(63,95,216,0.08), rgba(217,196,162,0.18));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #655b4f;
+      font-weight: 700;
+    }
+
+    .article {
+      padding: 30px 36px 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .article-title {
+      font-family: Georgia, serif;
+      font-size: 28px;
+      line-height: 1.2;
+      color: #201a14;
+    }
+
+    .article-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 12px;
+      color: #7d7469;
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+    }
+
+    .article-frame {
+      border-top: 1px solid rgba(84,71,54,0.12);
+      border-bottom: 1px solid rgba(84,71,54,0.12);
+      padding: 22px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .article-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: auto;
+      color: #5f564a;
+      font-size: 12px;
+    }
+
+    .settings-shell {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      overflow: hidden;
+    }
+
+    .rail {
+      border-right: 1px solid rgba(84,71,54,0.12);
+      background: rgba(245,241,234,0.76);
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rail-item {
+      padding: 11px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #53493d;
+    }
+
+    .rail-item.active {
+      background: var(--accent-quiet);
+      color: #2747c2;
+    }
+
+    .settings-content {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .model-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(84,71,54,0.10);
+      background: rgba(255,255,255,0.8);
+    }
+
+    .progress {
+      height: 6px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(84,71,54,0.10);
+      margin-top: 8px;
+    }
+
+    .progress > span {
+      display: block;
+      height: 100%;
+      width: 44%;
+      background: var(--accent);
+    }
+
+    .lightbox-frame {
+      flex: 1;
+      background: #0d1015;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .lightbox-image {
+      width: 72%;
+      height: 64%;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(135deg, rgba(63,95,216,0.20), rgba(217,196,162,0.10));
+      box-shadow: 0 24px 60px rgba(0,0,0,0.40);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.75);
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .gutter,
+    .close-fab,
+    .caption-bar {
+      position: absolute;
+    }
+
+    .gutter {
+      top: 0;
+      bottom: 0;
+      width: 16%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.55);
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .gutter.left { left: 0; }
+    .gutter.right { right: 0; }
+    .close-fab {
+      right: 18px;
+      top: 18px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+    }
+
+    .caption-bar {
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .platform-note {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(63,95,216,0.06);
+      border: 1px solid rgba(63,95,216,0.10);
+      font-size: 13px;
+      color: #4b4339;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #5c554c;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .swatch.muted { background: #7e7ba5; }
+    .swatch.success { background: var(--success); }
+    .swatch.warm { background: var(--warm); }
+
+    .source-list {
+      columns: 2;
+      column-gap: 30px;
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    .source-list li {
+      break-inside: avoid;
+      margin-bottom: 6px;
+    }
+
+    .caption {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #6a6156;
+    }
+
+    @media (max-width: 1180px) {
+      .research-grid,
+      .iteration-grid,
+      .platform-grid,
+      .screen-grid {
+        grid-template-columns: 1fr;
+      }
+      .settings-shell { grid-template-columns: 1fr; }
+      .rail { border-right: none; border-bottom: 1px solid rgba(84,71,54,0.12); }
+      .source-list { columns: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="eyebrow">Research-driven wireframes</div>
+      <h1>VoiceJournal App Experience</h1>
+      <p>
+        These are the pre-implementation wireframes for the full VoiceJournal desktop experience.
+        They were shaped through four subagent-backed iterations plus official platform guidance from
+        Apple Human Interface Guidelines, Microsoft Windows app design guidance, and GNOME HIG.
+        The goal is one product that still feels premium and native on macOS, Windows, and Linux.
+      </p>
+      <div class="flow">
+        <span>Home</span>
+        <div class="arrow">→</div>
+        <span>Session</span>
+        <div class="arrow">→</div>
+        <span>Review</span>
+        <div class="arrow">→</div>
+        <span>Save</span>
+        <div class="arrow">→</div>
+        <span>Entry Viewer</span>
+        <div class="arrow">→</div>
+        <span>Settings</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Internet Research Applied</h2>
+      <div class="research-grid">
+        <article class="card">
+          <h3>Apple HIG</h3>
+          <ul>
+            <li>Keep toolbars sparse and grouped into a small number of functional sections.</li>
+            <li>Use one obvious trailing primary action, not multiple competing tinted actions.</li>
+            <li>Use standard back and close symbols.</li>
+            <li>Do not title windows with the app name when the content title is more useful.</li>
+            <li>Toolbar controls and window chrome should feel system-native, not custom-framed.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Microsoft Windows</h3>
+          <ul>
+            <li>Keep command locations consistent across pages.</li>
+            <li>Use a title bar plus clear command surface pattern for premium desktop feel.</li>
+            <li>Use adaptive content margins: generous on wider windows.</li>
+            <li>Top-level navigation should stay shallow and readable.</li>
+            <li>Overflow is acceptable, but the most important commands stay visible.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>GNOME HIG</h3>
+          <ul>
+            <li>Header bars should align controls left, center, and right.</li>
+            <li>Keep only a small number of controls visible in the header bar.</li>
+            <li>Preserve blank drag space.</li>
+            <li>Prefer flat header-bar controls over heavy bordered button chrome.</li>
+            <li>Update header-bar controls by context, not by dumping every action into one row.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="legend">
+        <span><i class="swatch"></i> Primary action</span>
+        <span><i class="swatch muted"></i> Voice reply cue</span>
+        <span><i class="swatch success"></i> Positive / stored / safe state</span>
+        <span><i class="swatch warm"></i> Reflective / calm surface accent</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Four Iterations</h2>
+      <div class="iteration-grid">
+        <article class="card">
+          <h3>Iteration 1</h3>
+          <h4>Baseline information architecture</h4>
+          <ul>
+            <li>Lock the core flow: Home → Session → Review → Save.</li>
+            <li>Make the header the action zone on every screen.</li>
+            <li>Keep Session centered around one trust-critical focal point.</li>
+            <li>Treat Settings as one tabbed modal, not its own navigation stack.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag">Baseline hierarchy</span>
+            <span class="tag">Primary actions</span>
+            <span class="tag">Low-fidelity layout</span>
+          </div>
+        </article>
+        <article class="card">
+          <h3>Iteration 2</h3>
+          <h4>Native premium correction</h4>
+          <ul>
+            <li>Reduce toolbar density and honor platform command placement.</li>
+            <li>Separate what changes by OS from what remains invariant.</li>
+            <li>Keep the body layouts stable while adapting the chrome.</li>
+            <li>Preserve one primary CTA and move secondary actions to overflow/contextual surfaces.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag">macOS unified toolbar</span>
+            <span class="tag">Windows command surface</span>
+            <span class="tag">GNOME header bar</span>
+          </div>
+        </article>
+        <article class="card">
+          <h3>Iteration 3</h3>
+          <h4>Premium reflective writing feel</h4>
+          <ul>
+            <li>Increase breathing room and emotional pacing.</li>
+            <li>Shift from procedural-looking UI to a calmer editorial hierarchy.</li>
+            <li>Make Review and Viewer feel like reading spaces, not utility panels.</li>
+            <li>Reduce clutter that makes the product feel commodity-grade.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag">Negative space</span>
+            <span class="tag">Journal typography</span>
+            <span class="tag">Calm interaction</span>
+          </div>
+        </article>
+        <article class="card">
+          <h3>Iteration 4</h3>
+          <h4>Feasibility and realism pass</h4>
+          <ul>
+            <li>Keep the final wireframes implementable in PySide6.</li>
+            <li>Respect the strict swipe contract, save-intent capture, and model-state gating.</li>
+            <li>Preserve accessibility and native-fit rules as non-negotiable.</li>
+            <li>Cut premium ideas that would create implementation drag without visible payoff.</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag">Feasible</span>
+            <span class="tag">Accessible</span>
+            <span class="tag">Cross-platform</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Platform Chrome Direction</h2>
+      <div class="platform-grid">
+        <article class="card">
+          <div class="screen compact">
+            <div class="chrome">
+              <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <div class="toolbar-button">←</div>
+              <div class="title">Home</div>
+              <div style="flex:1"></div>
+              <div class="toolbar-button">⋯</div>
+              <div class="toolbar-button">⚙</div>
+              <div class="entry-button">＋ New Entry</div>
+            </div>
+            <div class="screen-body">
+              <div class="search">⌘F Search your entries…</div>
+              <div class="platform-note">
+                <strong>macOS:</strong> unified toolbar, sparse trailing controls, system traffic lights,
+                content-aware title, no custom frame chrome.
+              </div>
+            </div>
+          </div>
+          <div class="caption">macOS uses the most restrained chrome: three toolbar groups, one prominent trailing action, and content-first window titles.</div>
+        </article>
+
+        <article class="card">
+          <div class="screen compact">
+            <div class="chrome">
+              <div class="title">VoiceJournal</div>
+              <div style="flex:1"></div>
+              <div class="ghost">—</div>
+              <div class="ghost">□</div>
+              <div class="ghost">✕</div>
+            </div>
+            <div class="chrome" style="height:52px; border-bottom:1px solid rgba(84,71,54,0.08)">
+              <div class="toolbar-button">☰</div>
+              <div class="title">Home</div>
+              <div style="flex:1"></div>
+              <div class="ghost">Search</div>
+              <div class="toolbar-button">⚙</div>
+              <div class="entry-button">＋ New Entry</div>
+            </div>
+            <div class="screen-body">
+              <div class="platform-note">
+                <strong>Windows:</strong> title bar plus command surface, clearer separation between navigation and commands,
+                generous 24 px content margins on wide windows.
+              </div>
+            </div>
+          </div>
+          <div class="caption">Windows gets a clearer command bar rhythm: title bar first, command surface second, content below with larger margins.</div>
+        </article>
+
+        <article class="card">
+          <div class="screen compact">
+            <div class="chrome">
+              <div class="toolbar-button">←</div>
+              <div style="flex:1"></div>
+              <div class="title">VoiceJournal</div>
+              <div style="flex:1"></div>
+              <div class="toolbar-button">⚙</div>
+              <div class="entry-button">＋ New</div>
+            </div>
+            <div class="screen-body">
+              <div class="platform-note">
+                <strong>Linux / GNOME-leaning:</strong> explicit left/center/right alignment, flat header-bar controls,
+                visible drag space, and minimal header density.
+              </div>
+            </div>
+          </div>
+          <div class="caption">Linux keeps the same product structure but uses cleaner header-bar spacing and flatter controls to respect GNOME expectations.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Final Wireframes</h2>
+      <p>
+        The body layouts below are the invariant app experience. The platform chrome above wraps these same flows with OS-native command placement.
+      </p>
+
+      <div class="screen-grid">
+        <article class="card">
+          <h3>Home</h3>
+          <div class="screen">
+            <div class="chrome">
+              <div class="title">Home</div>
+              <div style="flex:1"></div>
+              <div class="toolbar-button">⋯</div>
+              <div class="toolbar-button">⚙</div>
+              <div class="entry-button">＋ New Entry</div>
+            </div>
+            <div class="screen-body">
+              <div class="search">Search your entries…</div>
+              <div class="calendar">
+                <div class="month-row">
+                  <div class="month-group">
+                    <div class="toolbar-button">«</div>
+                    <div class="toolbar-button">‹</div>
+                  </div>
+                  <div class="title" style="text-align:center">April 2026</div>
+                  <div class="month-group" style="justify-content:flex-end;">
+                    <div class="toolbar-button">›</div>
+                    <div class="toolbar-button">»</div>
+                  </div>
+                </div>
+                <div class="weekday-row">
+                  <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                </div>
+                <div class="days">
+                  <div class="day"><span>29</span></div>
+                  <div class="day heat-2"><span>30</span><span class="dot"></span></div>
+                  <div class="day"><span>31</span></div>
+                  <div class="day"><span>1</span></div>
+                  <div class="day heat-3 selected"><span>2</span><span class="dot"></span></div>
+                  <div class="day"><span>3</span></div>
+                  <div class="day heat-2"><span>4</span><span class="dot"></span></div>
+                  <div class="day"><span>5</span></div>
+                  <div class="day heat-2"><span>6</span><span class="dot"></span></div>
+                  <div class="day"><span>7</span></div>
+                  <div class="day"><span>8</span></div>
+                  <div class="day heat-2"><span>9</span><span class="dot"></span></div>
+                  <div class="day"><span>10</span></div>
+                  <div class="day"><span>11</span></div>
+                </div>
+              </div>
+              <div class="entry-list">
+                <div class="entry-row">
+                  <div class="mood"></div>
+                  <div>
+                    <div class="entry-title">Coming back to morning runs</div>
+                    <div class="snippet">A quiet, slow start — the weather was unusually clear and the body settled in.</div>
+                  </div>
+                  <div class="meta">Apr 24<br>19:42</div>
+                </div>
+                <div class="entry-row">
+                  <div class="mood" style="background:#8a9099"></div>
+                  <div>
+                    <div class="entry-title">A quiet evening alone</div>
+                    <div class="snippet">Cooked for one, but the kitchen felt gentler than it has in months.</div>
+                  </div>
+                  <div class="meta">Apr 23<br>21:08</div>
+                </div>
+                <div class="entry-row">
+                  <div class="mood" style="background:#d27272"></div>
+                  <div>
+                    <div class="entry-title">Work spillover</div>
+                    <div class="snippet">The day did not end when I closed the laptop, which is the real problem.</div>
+                  </div>
+                  <div class="meta">Apr 22<br>18:15</div>
+                </div>
+              </div>
+              <div class="cta-footer">
+                <div class="ghost">Showing entries for Wed, Apr 24</div>
+                <div class="ghost">Move through months or years without leaving this view</div>
+              </div>
+            </div>
+          </div>
+          <div class="caption">Home is archive-first and calm: lightweight search, a full month at a glance, simple month and year stepping for deep archive navigation, dense-but-premium rows, and one unmistakable CTA.</div>
+        </article>
+
+        <article class="card">
+          <h3>Session</h3>
+          <div class="screen">
+            <div class="chrome">
+              <div class="toolbar-button">✕</div>
+              <div style="flex:1"></div>
+              <div class="pill">Take your time</div>
+              <div style="flex:1"></div>
+              <div class="ghost">Lucy ▾</div>
+              <div class="toolbar-button">／</div>
+            </div>
+            <div class="screen-body" style="gap:16px;">
+              <div class="title" style="text-align:center; font-size:22px; font-family:Georgia,serif; color:#1e1915;">What's been on your mind today?</div>
+              <div class="orb-stage">
+                <div class="orb muted"></div>
+                <div class="state-copy">
+                  <strong>Voice reply playing</strong>
+                  <span>Listen now, then keep going when you're ready.</span>
+                </div>
+              </div>
+              <div class="transcript-box">
+                <div class="turn"><strong>Assistant</strong> · What part of the day stayed with you the longest?</div>
+                <div class="turn"><strong>You</strong> · It was the moment I got home and realized how quiet the place felt.</div>
+              </div>
+              <div class="panel-box" style="padding:16px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;">
+                <div>
+                  <div class="title" style="margin-bottom:8px;">Add a photo to this entry</div>
+                  <p style="margin:0; font-size:13px;">Add a photo while the moment is fresh, or leave it for later.</p>
+                </div>
+                <div class="tag-row" style="margin:0;">
+                  <span class="entry-button">Add Photo</span>
+                  <span class="ghost">Skip for now</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="caption">Session keeps one focal point. The center is sacred: state, trust, and turn progression live there; everything else recedes.</div>
+        </article>
+
+        <article class="card">
+          <h3>Review</h3>
+          <div class="screen">
+            <div class="chrome">
+              <div class="ghost">← Back</div>
+              <div style="flex:1"></div>
+              <div class="title">Review your entry</div>
+              <div style="flex:1"></div>
+              <div class="ghost">Discard</div>
+              <div class="entry-button">Save when ready</div>
+            </div>
+            <div class="screen-body">
+              <div class="panel-box" style="padding:16px; display:flex; flex-direction:column; gap:10px;">
+                <div class="title" style="font-size:26px; font-family:Georgia,serif; color:#231d17;">A quiet evening alone</div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                  <span class="chip">Mood · Reflective</span>
+                  <span class="chip">#solitude</span>
+                  <span class="chip">#cooking</span>
+                  <span class="chip">+ 3 more</span>
+                </div>
+              </div>
+              <div class="editor">
+                <div class="editor-toolbar">
+                  <span class="chip">B</span>
+                  <span class="chip">I</span>
+                  <span class="chip">U</span>
+                  <span class="chip">H1</span>
+                  <span class="chip">H2</span>
+                  <span class="chip">• List</span>
+                  <span class="chip">1. List</span>
+                </div>
+                <div class="editor-line w1"></div>
+                <div class="editor-line w2"></div>
+                <div class="editor-line w1"></div>
+                <div class="editor-line w3"></div>
+                <div class="editor-line w1"></div>
+                <div class="editor-line w4"></div>
+                <div class="editor-line w2"></div>
+              </div>
+              <div class="photo-strip">
+                <div class="thumb">1</div>
+                <div class="thumb">2</div>
+                <div class="thumb">3</div>
+                <div class="thumb">＋ Add</div>
+              </div>
+              <div class="ghost" style="align-self:flex-end">Save now, or keep shaping the entry a little longer</div>
+            </div>
+          </div>
+          <div class="caption">Review feels editorial, not administrative. Metadata is compact, the editor dominates, and save intent can be captured during generation.</div>
+        </article>
+
+        <article class="card">
+          <h3>Entry Viewer</h3>
+          <div class="screen">
+            <div class="chrome">
+              <div class="ghost">← Home</div>
+              <div class="ghost">‹ Prev</div>
+              <div style="flex:1"></div>
+              <div class="title">Apr 26, 2026</div>
+              <div style="flex:1"></div>
+              <div class="ghost">Next ›</div>
+              <div class="ghost">Edit</div>
+            </div>
+            <div class="article">
+              <div class="article-title">A quiet evening alone</div>
+              <div class="article-meta">
+                <span>Apr 26, 2026</span>
+                <span>Lucy</span>
+                <span>Reflective</span>
+              </div>
+              <div class="article-frame">
+                <div class="article-line w2"></div>
+                <div class="article-line w1"></div>
+                <div class="article-line w3"></div>
+                <div class="article-line w1"></div>
+                <div class="article-line w2"></div>
+                <div class="article-line w4"></div>
+                <div class="article-line w1"></div>
+                <div class="article-line w3"></div>
+              </div>
+              <div class="photo-strip">
+                <div class="thumb">📷</div>
+                <div class="thumb">📷</div>
+                <div class="thumb">📷</div>
+              </div>
+              <div class="article-footer">
+                <div>Swipe navigation on macOS is strict, momentum-safe, and disabled in edit mode.</div>
+                <div class="tag-row" style="margin:0;">
+                  <span class="chip">#solitude</span>
+                  <span class="chip">#reflection</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="caption">Viewer is the quietest screen in the product: the writing gets the space, the chrome steps back, and navigation remains discoverable.</div>
+        </article>
+
+        <article class="card">
+          <h3>Settings</h3>
+          <div class="screen compact">
+            <div class="chrome">
+              <div class="title">Settings</div>
+              <div style="flex:1"></div>
+              <div class="toolbar-button">✕</div>
+            </div>
+            <div class="screen-body" style="padding-top:0;">
+              <div class="settings-shell">
+                <div class="rail">
+                  <div class="rail-item">Voice</div>
+                  <div class="rail-item active">Downloads</div>
+                  <div class="rail-item">Audio</div>
+                  <div class="rail-item">Appearance</div>
+                  <div class="rail-item">Storage</div>
+                </div>
+                <div class="settings-content">
+                  <div class="model-row">
+                    <div>
+                      <div class="entry-title">Speech recognition</div>
+                      <div class="meta">Ready to use · 145 MB</div>
+                    </div>
+                    <div class="ghost">Manage</div>
+                    <div class="ghost">About</div>
+                  </div>
+                  <div class="model-row">
+                    <div>
+                      <div class="entry-title">Writing help</div>
+                      <div class="meta">Downloading now · almost ready</div>
+                      <div class="progress"><span></span></div>
+                    </div>
+                    <div class="ghost">Pause</div>
+                    <div class="ghost">See more</div>
+                  </div>
+                  <div class="model-row">
+                    <div>
+                      <div class="entry-title">Voice replies</div>
+                      <div class="meta">Up next · 80 MB</div>
+                    </div>
+                    <div class="ghost">Start now</div>
+                    <div class="ghost">Help</div>
+                  </div>
+                  <div class="panel-box" style="padding:14px; margin-top:auto;">
+                    <div class="title" style="margin-bottom:6px;">Everything stays on this device.</div>
+                    <p style="margin:0; font-size:13px;">No account required. Your journal stays private. After setup, everything runs from your device.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="caption">Settings stays clear rather than flashy: voices, downloads, appearance, and privacy are easy to understand at a glance.</div>
+        </article>
+
+        <article class="card">
+          <h3>Photo Lightbox</h3>
+          <div class="screen dark compact">
+            <div class="lightbox-frame">
+              <div class="gutter left">‹</div>
+              <div class="lightbox-image">Photo image</div>
+              <div class="gutter right">›</div>
+              <div class="close-fab">✕</div>
+              <div class="caption-bar">single-click image → tooltip · right-click → actions · double-click scrim → close</div>
+            </div>
+          </div>
+          <div class="caption">The lightbox is deliberately simple: large image, big side gutters, quiet context menu, and no accidental-close behavior.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Final Design Rules Before Implementation</h2>
+      <div class="research-grid">
+        <article class="card">
+          <h3>Invariant Rules</h3>
+          <ul>
+            <li>Home, Session, Review, Viewer, and Settings keep the same body structure across all OSes.</li>
+            <li>Only chrome placement and header density change by platform.</li>
+            <li>`Cmd/Ctrl+N` must route through `NewEntryButton.activate()`.</li>
+            <li>`Cmd/Ctrl+S` must use the same save action path as the Review toolbar button.</li>
+            <li>Session trust cues are redundant by design and may not be simplified away in implementation.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Premium Rules</h3>
+          <ul>
+            <li>One primary action per screen, visually separated from utility actions.</li>
+            <li>More whitespace, fewer header controls, higher reading comfort.</li>
+            <li>Editing surfaces should feel deliberate and calm, not chat-app-like.</li>
+            <li>Archive screens should feel quiet; active voice screens should feel focused, not loud.</li>
+            <li>Do not add decorative complexity that fights the native chrome.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Feasibility Rules</h3>
+          <ul>
+            <li>Keep unified toolbars implementable with real `QToolBar` instances.</li>
+            <li>Respect the strict macOS swipe thresholds and momentum suppression.</li>
+            <li>Keep photo add as a dedicated inline Session action, not an overlay or modal interruption.</li>
+            <li>Keep save-intent capture explicit in Review state handling.</li>
+            <li>Prove bundled asset loading and Gemma 3n compatibility before widening UI scope.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Sources</h2>
+      <ul class="source-list">
+        <li>Apple Human Interface Guidelines — Toolbars</li>
+        <li>Apple Human Interface Guidelines — Windows</li>
+        <li>Microsoft Learn — NavigationView</li>
+        <li>Microsoft Learn — Command Bar</li>
+        <li>GNOME HIG — Header Bars</li>
+        <li>Workspace design docs — UX_DESIGN v2/v3/v4</li>
+        <li>Workspace software design doc — Software-DESIGN6</li>
+        <li>Subagent iteration passes: baseline IA, native premium critique, premium writing refinement, feasibility QA</li>
+      </ul>
+      <p class="caption">
+        This file is for stakeholder review and pre-implementation alignment. It is intentionally more visual than the prose specs and should be reviewed alongside the current functional design docs.
+      </p>
+    </section>
+  </div>
+</body>
+</html>

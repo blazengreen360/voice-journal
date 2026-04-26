@@ -1,0 +1,7 @@
+QMainWindow {
+    background-color: ${surface};
+}
+
+QLabel {
+    color: ${text_primary};
+}

@@ -1,0 +1,4 @@
+- Before closing work, run formal review; user preference is that tests/live validation alone are not sufficient.
+- For packaging-affecting changes, validate the narrow slice first, then rebuild artifacts and smoke-test from the installed or bundled surface.
+- If wheel/install surface changes, smoke from outside the repo root.
+- If PyInstaller assets/spec change, rebuild from .venv-build and run the packaged VOICEJOURNAL_SMOKE path.

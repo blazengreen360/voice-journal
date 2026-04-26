@@ -1,0 +1,8 @@
+- Dev install: source .venv/bin/activate && python -m pip install -e '.[dev]'
+- Build env install: source .venv-build/bin/activate && python -m pip install -e '.[build]'
+- Run tests: ./.venv/bin/python -m pytest -q
+- Build wheel: ./.venv-build/bin/python -m build --wheel
+- Build packaged app: ./.venv-build/bin/pyinstaller --clean --noconfirm voicejournal.spec
+- macOS packaged smoke target: ./dist/VoiceJournal.app/Contents/MacOS/VoiceJournal (from the onedir app bundle)
+- Dev asset smoke: VOICEJOURNAL_SMOKE=1 VOICEJOURNAL_SMOKE_OUTPUT=/tmp/vj-smoke.json ./.venv/bin/python main.py
+- Packaged asset smoke (macOS): VOICEJOURNAL_SMOKE=1 VOICEJOURNAL_SMOKE_OUTPUT=/tmp/vj-bundle-smoke.json ./dist/VoiceJournal.app/Contents/MacOS/VoiceJournal

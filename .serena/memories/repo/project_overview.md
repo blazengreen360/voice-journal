@@ -1,0 +1,6 @@
+- Purpose: VoiceJournal is a local-first PySide6 desktop journaling app for macOS/Windows/Linux with voice-first capture and local AI runtime.
+- Current source-of-truth docs: docs/design/Architecture.md, docs/design/UX.md, docs/design/VOICEJOURNAL_WIREFRAMES_FINAL.html, plan.md.
+- Core installable namespace: voicejournal.app for runtime code, voicejournal.assets for packaged themes and bundled model assets.
+- Packaging: PyInstaller-based standalone app builds from .venv-build; writable user data goes through platformdirs, while bundled assets stay under voicejournal.assets.
+- macOS packaging convention: use the supported onedir EXE -> COLLECT -> BUNDLE path in voicejournal.spec; do not route the .app through a onefile windowed executable.
+- Current packaged VAD asset: voicejournal/assets/models/silero_vad.onnx pinned to Silero VAD v6.2.1.

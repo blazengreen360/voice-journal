@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "voicejournal"
+version = "0.1.0a0"
+description = "A voice-first local journaling desktop app"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "PySide6>=6.7.0",
+    "faster-whisper>=1.0.0",
+    "llama-cpp-python>=0.3.10",
+    "onnxruntime>=1.17.0",
+    "sounddevice>=0.4.6",
+    "soundfile>=0.12.1",
+    "soxr>=0.4.0",
+    "kokoro-onnx>=0.5.0",
+    "markdown>=3.6",
+    "platformdirs>=4.0.0",
+    "numpy>=1.26.0",
+    "pyobjc-framework-Cocoa>=10.0; sys_platform == 'darwin'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+]
+build = [
+    "build>=1.2.0",
+    "pyinstaller>=6.0.0",
+]
+
+[project.scripts]
+voicejournal = "voicejournal.app.cli:main"
+
+[tool.hatch.build]
+include = [
+    "voicejournal/**/*.py",
+    "voicejournal/assets/**/*",
+    "tests/**/*.py",
+    "main.py",
+    "README.md",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["voicejournal"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

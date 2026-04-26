@@ -1,0 +1,5 @@
+- Python 3.10 project; prefer explicit types, dataclasses with slots for simple data containers, and minimal docstrings/comments.
+- Keep runtime code under the project-specific voicejournal namespace; do not reintroduce a top-level generic app package.
+- Resolve packaged assets through importlib.resources.files('voicejournal.assets').
+- Store writable runtime data under platformdirs-managed per-user paths; bundled models/themes stay inside the package assets.
+- When touching packaging or external-library behavior, use Context7 first and validate with executable checks, not narrative only.

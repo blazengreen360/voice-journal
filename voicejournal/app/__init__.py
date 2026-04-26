@@ -1,0 +1,1 @@
+"""VoiceJournal application package."""
