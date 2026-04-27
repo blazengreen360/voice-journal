@@ -120,9 +120,12 @@ file), `TTSEngine` falls back to the first available voice and logs a warning.
 bundled-not-downloaded). Downloading the selectable Gemma 4 E4B `Q4_K_M`
 upgrade adds another 5,335,289,824 bytes.
 
-**Offline / manual placement:** Place files in `config.models_dir` with the
-exact filenames shown in Settings → Manual Installation. App detects by
-filename and skips download.
+**Offline / manual placement:** Place artifacts in the exact install layout
+shown in Settings → Manual Installation. Single-file sources go directly in
+`config.models_dir`; bundle-backed sources go under their install directory
+inside `config.models_dir` (for example `faster-whisper-base.en/config.json`
+and `kokoro-v1.0/voices-v1.0.bin`). App detects by expected path and skips
+download when every required artifact is present.
 
 **Minimum system requirement:** re-validate before `0.1.0`; the earlier 8 GB
 note was written against the smaller Gemma 3n default and is no longer treated
@@ -659,8 +662,9 @@ class ModelDownloader(QObject):
 - Cancel mid-download → partial preserved, next call resumes.
 - Cancel applies only to the active download; queued items remain queued.
 - Server returns 200 instead of 206 → falls back to clean restart.
-- Atomic install: kill process between write and rename → on next launch the
-  final file is either fully present-and-valid or missing, never corrupt.
+- Atomic install uses `os.replace()` after hash verification; focused tests
+    cover valid-partial promotion and corrupt-partial recovery, while an explicit
+    kill-between-write-and-rename crash probe remains release-hardening follow-up.
 
 ---
 

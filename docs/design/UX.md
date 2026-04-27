@@ -185,10 +185,10 @@ Repository requirements:
 
 - model key
 - display name
-- final filename
-- download URL
-- expected SHA256
-- expected byte size
+- install layout (single final filename or bundle directory + artifact filenames)
+- download URL or URLs
+- expected SHA256 per artifact
+- expected byte size total/per artifact
 
 Downloader requirements:
 
