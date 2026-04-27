@@ -1,0 +1,10 @@
+- Slice 3 implemented sqlite-backed LocalRepo in voicejournal/app/core/local_repo.py plus JournalRepository interface and maintenance helpers.
+- DB connection contract: journal_mode=WAL, synchronous=NORMAL, foreign_keys=ON, temp_store=MEMORY.
+- save_entry preserves child rows when turns/photos are None, replaces them only when explicit sequences are supplied.
+- save_entry rejects mismatched child entry_ids, invalid/nonexistent photo file paths, and any unmanaged body img src values.
+- Body img src normalization contract: store only relative photos/<entry_id>/<filename>; accept quoted/unquoted src, Windows file:///C:/ URLs, paths with spaces, data-src sibling attrs, and filenames with quotes; html-unescape before validation and html-escape replacements; expand on read only if the managed file still exists.
+- FTS integrity contract: compare row presence plus ordered token sequences from fts5vocab(instance) so missing/content/order drift all trigger rebuild via maintain_fts.
+- Photo reorder requires a complete permutation of current photo ids; import_photo_file is collision-safe.
+- reaper removes orphan photo dirs only; skips symlinked directories.
+- Focused validation: ./.venv/bin/python -m pytest -q tests/test_local_repo.py tests/test_maintenance.py -> 28 passed; final VoiceJournal Reviewer signoff had no findings.
+- Residual risk: Windows file URL behavior is covered by monkeypatched tests, not a native Windows run yet.

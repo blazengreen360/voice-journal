@@ -1,0 +1,5 @@
+- Slice 2 is implemented in voicejournal/app/cli.py and voicejournal/app/single_instance.py.
+- Duplicate launches show the specified alert copy: 'VoiceJournal is already running. Switch to the existing window.' and exit 0.
+- Startup now releases the lock explicitly on normal shutdown and window-init failure, while still registering atexit release.
+- SingleInstanceLock maps only real contention to AlreadyRunningError; unrelated lock syscall failures propagate.
+- Focused validation completed with 13 tests across tests/test_cli.py and tests/test_single_instance.py, including POSIX lifetime lock behavior and mocked Windows success/contention/non-contention branches.

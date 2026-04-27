@@ -1,0 +1,5 @@
+- Slice 1 config/path work is implemented in voicejournal/app/config.py and voicejournal/app/packaging_smoke.py.
+- AppConfig owns PlatformDirs-based writable paths plus theme_asset('light'|'dark') for bundled QSS lookup.
+- Packaging smoke now checks both light and dark QSS assets plus the pinned bundled Silero SHA.
+- Packaging smoke returns structured JSON for report-build failures, unreadable bundled assets, and output-path write failures.
+- Validation completed for this slice: focused pytest (tests/test_config.py, tests/test_packaging_smoke.py), dev VOICEJOURNAL_SMOKE via main.py, and rebuilt macOS packaged smoke via dist/VoiceJournal.app.

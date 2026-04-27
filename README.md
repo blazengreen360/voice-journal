@@ -26,7 +26,7 @@ Current source of truth:
 Planned default AI stack:
 
 - STT: `faster-whisper`
-- LLM: `llama-cpp-python` with Gemma 3n default and Gemma 3 1B fallback
+- LLM: `llama-cpp-python` with official ggml-org Gemma 4 E2B `Q8_0` default, Gemma 4 E4B `Q4_K_M` selectable upgrade, and Gemma 3 1B fallback; the minimum Gemma 4-capable `llama-cpp-python` release is still a release gate
 - TTS: `kokoro-onnx`
 - VAD: bundled Silero ONNX via `onnxruntime`
 
@@ -94,7 +94,7 @@ Rules:
 - Do not run `pip` at runtime
 - Store models, database, photos, logs, and caches in per-user app-data directories
 - Do not place the VoiceJournal data folder inside a cloud-synced directory such as Dropbox, iCloud Drive, OneDrive, or Google Drive
-- Minimum system requirement: 8 GB RAM; 12 GB is recommended for the larger Gemma upgrade path
+- Minimum system requirement: re-validate before `0.1.0` now that official Gemma 4 E2B `Q8_0` is the default artifact; the old 8 GB note is no longer authoritative
 
 The target release artifact is a packaged desktop app, not a Python development checkout.
 

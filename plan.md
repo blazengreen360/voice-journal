@@ -66,9 +66,9 @@ Use these rules while implementing:
 
 These are short, falsifiable checks for assumptions that can still invalidate the implementation.
 
-1. Gemma 3n load spike
+1. Gemma 4 E2B floor spike
 Outcome:
-Confirm `llama-cpp-python==0.3.10` can load the default Gemma 3n GGUF on a clean machine, or record the minimum working version and update the current design set under `docs/design/`.
+Starting from the current project floor, bump `llama-cpp-python` until a clean machine can load the official `ggml-org/gemma-4-E2B-it-GGUF` default artifact `gemma-4-E2B-it-Q8_0.gguf`, then record that minimum working release and the revalidated minimum supported RAM guidance in the current design set under `docs/design/`.
 
 2. Bundled asset loading spike
 Outcome:
@@ -131,6 +131,7 @@ Modules:
 
 Acceptance:
 - Resume, cancel, hash verification, atomic install, queueing, and already-installed fast path all work.
+- Settings -> Downloads exposes separate rows for the default Writing help model and the optional Writing help Plus upgrade.
 
 5. Worker signal infrastructure
 Modules:
@@ -148,7 +149,7 @@ Modules:
 Acceptance:
 - Parallel load path works.
 - Synchronous LLM fast-path works.
-- Gemma 3n fallback to Gemma 3 1B works.
+- Gemma 4 E2B default and selectable Gemma 4 E4B both fall back to Gemma 3 1B on load failure.
 - Unload timer contract can be exercised from `MainWindow` later.
 
 7. Theme and QSS template system
@@ -499,7 +500,7 @@ This is the practical build order.
 
 Do not call the app ready until all of these are true:
 
-1. The Gemma 3n spike is resolved and documented in the current design set.
+1. The Gemma 4 E2B floor and RAM revalidation spike is resolved and documented in the current design set.
 2. The packaged asset-loading path is verified.
 3. The core vertical slice works end to end.
 4. The current archive, session, and surface gates from the wireframe deck have been exercised.
@@ -512,7 +513,7 @@ Do not call the app ready until all of these are true:
 1. Create the package skeleton and tests directory to match the current `docs/design/` set.
 2. Implement `config.py`, `single_instance.py`, and repository scaffolding.
 3. Implement `model_sources.py`, `model_downloader.py`, and their tests.
-4. Run the Gemma 3n and asset-loading spikes before deep UI work.
+4. Run the Gemma 4 and asset-loading spikes before deep UI work.
 5. Build the Home -> Session -> Review -> Save slice with the visible `Finish Entry` path before archive, photo, and settings refinements.
 
 ---

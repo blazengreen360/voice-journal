@@ -1,0 +1,4 @@
+- Phase 0 now has a repo-native Gemma floor probe via `main.py spike gemma-floor --model-path <path> [--output <json>]` routed from `voicejournal.app.cli`.
+- Probe uses llama-cpp-python high-level `Llama(model_path=..., n_ctx=...)` initialization and reports `load_ok`, `close_ok`, `report_write_ok`, overall `ok`, version/platform/RAM metadata.
+- Only explicit `spike` argv are parsed; incidental packaged-app launch args still fall through to normal GUI startup.
+- Focused regression coverage lives in `tests/test_cli.py` and `tests/test_gemma_floor_spike.py`.

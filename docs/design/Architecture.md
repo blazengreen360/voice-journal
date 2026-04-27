@@ -15,7 +15,7 @@ Every `[BLOCKING]`, `[VERIFY]`, and `[GAP]` from critic05 is resolved.
 | # | Area | v5 → v6 | critic05 ref |
 |---|------|---------|--------------|
 | 1 | TTS API | Wrong call: `tts.generate(text, voice_id=…)` → **`tts.create(text, voice=…, speed=…, lang="en-us")`** matching upstream `Kokoro.create()` ([source](https://github.com/thewh1teagle/kokoro-onnx/blob/main/src/kokoro_onnx/__init__.py)). `TTSEngine.synthesize()` wrapper insulates the rest of the app. `config.speech_rate` is now actually wired in. | A1 |
-| 2 | LLM dep floor | `llama-cpp-python>=0.3.5` (guess) → **`>=0.3.10`** with hard runtime fallback to Gemma 3 1B IT on `RuntimeError`. Gemma 3n text-only support landed in upstream llama.cpp on **2025-06-26** ([PR ggml-org/llama.cpp#14400](https://github.com/ggml-org/llama.cpp/pull/14400)); `llama-cpp-python` 0.3.10+ is the first release line confirmed to carry that ggml. Verification spike still required before tagging 0.1.0. | A2 |
+| 2 | LLM default + dep floor | **Gemma 4 E2B IT `Q8_0` default** with **Gemma 4 E4B IT `Q4_K_M`** selectable and hard runtime fallback to Gemma 3 1B IT on `RuntimeError`. Official current llama.cpp docs list `ggml-org/gemma-4-E2B-it-GGUF` and `ggml-org/gemma-4-E4B-it-GGUF`, and upstream contains dedicated Gemma 4 chat-template/parser support. The earlier `llama-cpp-python==0.3.10` clean-room proof only covered Gemma 3n, so the minimum Gemma 4-capable release still has to be re-recorded before tagging 0.1.0. | A2 |
 | 3 | Silero VAD ONNX I/O | Underspec'd ("run Silero ONNX") → **full I/O contract**: `input` is `[1, 576]` float32 (= 64-sample carry-over context + 512 new samples at 16 kHz), `state` is `[2, 1, 128]` float32 carried across calls, `sr` is `[1]` int64. Context buffer + state reset on session boundary. 512-sample ring buffer in front of the resampler. Verified against [`utils_vad.py`](https://github.com/snakers4/silero-vad/blob/master/src/silero_vad/utils_vad.py) and [`silero-vad-onnx.cpp`](https://github.com/snakers4/silero-vad/blob/master/examples/cpp/silero-vad-onnx.cpp). | A3 |
 | 4 | soxr semantics | "resample_chunk(chunk)" → **document variable output size**, **drain with `resample_chunk(np.zeros(0), last=True)` on stop**, `quality="HQ"`. Verified against [python-soxr docs](https://python-soxr.readthedocs.io/en/stable/). | A4 |
 | 5 | silero-vad rationale | "avoid torch" → **"reproducible installer + SHA256-pinned model"** (silero-vad v6.2.1, 2026-02-24, made ONNX runtime optional, weakening the torch-avoidance argument). | A5 |
@@ -57,7 +57,7 @@ accounts, no internet after first-run model downloads.
 | Resampler | `soxr` ≥ 0.4 | Anti-aliased polyphase; variable output block size; drain with `last=True` |
 | VAD | `onnxruntime` ≥ 1.17 + bundled `silero_vad.onnx` (~2 MB, SHA256-pinned) | Direct ONNX inference; no `silero-vad` PyPI dep; no torch |
 | STT | `faster-whisper` ≥ 1.0 | CTranslate2 |
-| LLM | `llama-cpp-python` ≥ 0.3.10 + Gemma 3n E2B IT GGUF | In-process; no server; runtime fallback to Gemma 3 1B IT on load failure |
+| LLM | `llama-cpp-python` + Gemma 4 E2B IT `Q8_0` GGUF | In-process; no server; Gemma 4 E4B `Q4_K_M` is selectable; Gemma 3 1B remains the runtime fallback; exact minimum Gemma 4-capable release is re-pinned before `0.1.0` |
 | TTS | `kokoro-onnx` ≥ 0.5 + `sounddevice.OutputStream` | `Kokoro.create(text, voice=, speed=, lang=)`; per-utterance OutputStream |
 | Editor | `QTextEdit` rich text only | HTML canonical |
 | Markdown ingest | `markdown.markdown()` (one-time) | LLM markdown → HTML on ingest |
@@ -71,25 +71,34 @@ accounts, no internet after first-run model downloads.
 
 | Model | Default | Source | Upgrade | Fallback |
 |-------|---------|--------|---------|----------|
-| STT | `faster-whisper` `base.en` (~145 MB) | huggingface.co/Systran/faster-whisper-base.en | `small.en`, `medium.en`, `base` | — |
-| LLM | **Gemma 3n E2B IT, Q4_K_M GGUF** (~2.0 GB) | `ggml-org/gemma-3n-E2B-it-GGUF` (official ggml-org GGUF) | Gemma 3n E4B IT Q4_K_M (~3.5 GB) | **Gemma 3 1B IT Q4_K_M GGUF** (auto on load failure) |
-| TTS | Kokoro v1.0 ONNX (~80 MB quantized) | github.com/thewh1teagle/kokoro-onnx releases | — | — |
+| STT | `faster-whisper` `base.en` (~150 MB total directory) | huggingface.co/Systran/faster-whisper-base.en | `small.en`, `medium.en`, `base` | — |
+| LLM | **Gemma 4 E2B IT, Q8_0 GGUF** | `ggml-org/gemma-4-E2B-it-GGUF` (official ggml-org GGUF) | Gemma 4 E4B IT Q4_K_M | **Gemma 3 1B IT Q4_K_M GGUF** (auto on load failure) |
+| TTS | Kokoro v1.0 int8 ONNX + voices (~115 MB total download) | github.com/thewh1teagle/kokoro-onnx releases | — | — |
 | VAD | Silero VAD ONNX (~2 MB, currently pinned from upstream `v6.2.1`) | snakers4/silero-vad releases (`silero_vad.onnx`) | — | `webrtcvad-wheels` |
 
-**Gemma 3n compatibility — verified.** Gemma 3n text-only inference landed in
-upstream `llama.cpp` on 2025-06-26 ([PR #14400](https://github.com/ggml-org/llama.cpp/pull/14400)).
-`llama-cpp-python` releases follow llama.cpp commits; v0.3.10 is the first
-line confirmed to ship a ggml/llama.cpp containing the Gemma 3n model
-implementation. App pins `llama-cpp-python>=0.3.10`. On `RuntimeError` /
-unsupported-arch error during load, the registry **automatically falls
-back** to Gemma 3 1B IT and shows a one-time banner; the user can pick
-either model in Settings.
+**Gemma 4 support — upstream confirmed.** Official current `llama.cpp` docs
+list `ggml-org/gemma-4-E2B-it-GGUF` and `ggml-org/gemma-4-E4B-it-GGUF` among
+the supported pre-quantized models, and current upstream contains dedicated
+Gemma 4 chat-template and parser support (`COMMON_CHAT_FORMAT_PEG_GEMMA4`,
+`google-gemma-4-31B-it.jinja`, `google-gemma-4-31B-it-interleaved.jinja`).
+The official ggml-org E2B repo currently exposes `gemma-4-E2B-it-Q8_0.gguf`
+as the practical default artifact, while the official E4B repo exposes
+`gemma-4-E4B-it-Q4_K_M.gguf` for the selectable upgrade path. `llama-cpp-python`
+tracks upstream `llama.cpp`, auto-loads GGUF chat-template metadata, and
+exposes `llama_chat_apply_template`, so Gemma 4 is now the design default.
+The earlier clean-room `0.3.10` proof only covered Gemma 3n, so the minimum
+Gemma 4-capable `llama-cpp-python` release still must be re-recorded before
+tagging `0.1.0`. On `RuntimeError` / unsupported-arch error during load, the
+registry **automatically falls back** to Gemma 3 1B IT and shows a one-time
+banner; the user can pick either Gemma 4 profile in Settings.
 
 > **Build-time spike (must run before tagging 0.1.0):** in a clean venv,
-> `pip install "llama-cpp-python==0.3.10"` then `Llama(model_path=…gemma-3n-E2B-it-Q4_K_M.gguf, n_ctx=4096)`.
-> If load fails, bump the floor to the next release that succeeds and
-> re-record here. If no current release loads it, demote Gemma 3n to optional
-> and ship Gemma 3 1B IT as the default.
+> start from the current project floor, install a candidate `llama-cpp-python`
+> release, then `Llama(model_path=…gemma-4-E2B-it-Q8_0.gguf, n_ctx=4096)`.
+> If load fails, bump to the next release and retry until it succeeds, then
+> re-record that minimum working release here. Until that spike closes, treat
+> the current `llama-cpp-python>=0.3.10` floor as provisional for Gemma 4 and
+> keep Gemma 3 1B IT as the mandatory runtime fallback.
 
 **Kokoro voice mapping** — verified against
 `huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md`:
@@ -105,16 +114,19 @@ VOICE_MAP = {
 UI shows "Lucy" / "Allen". On missing voice ID at runtime (corrupt model
 file), `TTSEngine` falls back to the first available voice and logs a warning.
 
-**First-run download budget:** ~2.2 GB total (whisper 145 + Gemma 3n 2.0 GB +
-Kokoro 80 MB + Silero 2 MB bundled-not-downloaded). Cached in
-`config.models_dir`. Never re-downloaded.
+**First-run download budget:** ~5.24 GB total for the default stack (Whisper
+~150 MB directory bundle + Gemma 4 E2B `Q8_0` 4,967,494,592 bytes + Kokoro int8 model
+92,361,271 bytes + Kokoro voices 28,214,398 bytes + Silero 2 MB
+bundled-not-downloaded). Downloading the selectable Gemma 4 E4B `Q4_K_M`
+upgrade adds another 5,335,289,824 bytes.
 
 **Offline / manual placement:** Place files in `config.models_dir` with the
 exact filenames shown in Settings → Manual Installation. App detects by
 filename and skips download.
 
-**Minimum system requirement:** 8 GB RAM (README). 12 GB recommended for E4B
-upgrade.
+**Minimum system requirement:** re-validate before `0.1.0`; the earlier 8 GB
+note was written against the smaller Gemma 3n default and is no longer treated
+as authoritative once the official Gemma 4 E2B `Q8_0` artifact became default.
 
 ---
 
@@ -508,46 +520,66 @@ timer thinking it's missing.
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
+class ModelArtifact:
+    filename: str       # final filename inside the install directory
+    url: str            # HTTPS download URL
+    sha256: str         # lowercase hex
+    size_bytes: int     # expected byte size for resume + progress
+
+@dataclass(frozen=True)
 class ModelSource:
     key: str            # config.llm_model / whisper_model value
     display: str        # UI label
-    filename: str       # final filename inside config.models_dir
-    url: str            # HTTPS download URL
-    sha256: str         # lowercase hex
-    size_bytes: int     # total expected size; used for progress + sanity check
+    artifacts: tuple[ModelArtifact, ...]
+    install_dir: str | None = None   # required for multi-file directory installs
+
+    @property
+    def size_bytes(self) -> int:
+        return sum(artifact.size_bytes for artifact in self.artifacts)
 
 MODEL_SOURCES: dict[str, ModelSource] = {
     "whisper-base.en": ModelSource(
         key="whisper-base.en",
         display="Whisper base.en",
-        filename="ggml-base.en.bin",
-        url="https://huggingface.co/Systran/faster-whisper-base.en/resolve/main/model.bin",
-        sha256="<TBD-FILL-AT-RELEASE>",
-        size_bytes=147_964_211,
+        install_dir="faster-whisper-base.en",
+        artifacts=(
+            ModelArtifact(filename="config.json", url="https://huggingface.co/Systran/faster-whisper-base.en/resolve/main/config.json", ...),
+            ModelArtifact(filename="model.bin", url="https://huggingface.co/Systran/faster-whisper-base.en/resolve/main/model.bin", ...),
+            ModelArtifact(filename="tokenizer.json", url="https://huggingface.co/Systran/faster-whisper-base.en/resolve/main/tokenizer.json", ...),
+            ModelArtifact(filename="vocabulary.txt", url="https://huggingface.co/Systran/faster-whisper-base.en/resolve/main/vocabulary.txt", ...),
+        ),
     ),
-    "gemma-3n-E2B-it-Q4_K_M": ModelSource(
-        key="gemma-3n-E2B-it-Q4_K_M",
-        display="Gemma 3n E2B IT (Q4_K_M)",
-        filename="gemma-3n-E2B-it-Q4_K_M.gguf",
-        url="https://huggingface.co/ggml-org/gemma-3n-E2B-it-GGUF/resolve/main/gemma-3n-E2B-it-Q4_K_M.gguf",
+    "gemma-4-E2B-it-Q8_0": ModelSource.single_file(
+        key="gemma-4-E2B-it-Q8_0",
+        display="Gemma 4 E2B IT (Q8_0)",
+        filename="gemma-4-E2B-it-Q8_0.gguf",
+        url="https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q8_0.gguf",
         sha256="<TBD-FILL-AT-RELEASE>",
-        size_bytes=2_100_000_000,    # approximate; real value pinned at release
+        size_bytes=4_967_494_592,
     ),
-    "gemma-3n-E4B-it-Q4_K_M": ModelSource(...),
-    "gemma-3-1B-it-Q4_K_M":   ModelSource(...),    # fallback model
+    "gemma-4-E4B-it-Q4_K_M": ModelSource.single_file(
+        key="gemma-4-E4B-it-Q4_K_M",
+        display="Gemma 4 E4B IT (Q4_K_M)",
+        filename="gemma-4-E4B-it-Q4_K_M.gguf",
+        url="https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
+        sha256="<TBD-FILL-AT-RELEASE>",
+        size_bytes=5_335_289_824,
+    ),
+    "gemma-3-1B-it-Q4_K_M":   ModelSource.single_file(...),    # fallback model
     "kokoro-v1.0":            ModelSource(
-        filename="kokoro-v1.0.onnx",
-        url="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx",
-        ...,
-    ),
-    "kokoro-voices-v1.0":     ModelSource(
-        filename="voices-v1.0.bin",
-        url="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin",
-        ...,
+        install_dir="kokoro-v1.0",
+        artifacts=(
+            ModelArtifact(filename="kokoro-v1.0.int8.onnx", url="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx", ...),
+            ModelArtifact(filename="voices-v1.0.bin", url="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin", ...),
+        ),
     ),
     # Silero VAD is NOT in this table — it is bundled in voicejournal/assets/models/.
 }
 ```
+
+`faster-whisper` local loading expects a converted CTranslate2 model directory,
+not an arbitrary renamed `model.bin`, so the Speech recognition source installs
+the full `faster-whisper-base.en/` directory under `config.models_dir`.
 
 `<TBD-FILL-AT-RELEASE>` values are pinned by the release engineer at tag time
 by downloading once and recording the hash; release validation verifies that
@@ -595,46 +627,9 @@ class ModelDownloader(QObject):
                 self.failed.emit(source.key, str(e))
 
     def _download_one(self, source: ModelSource) -> None:
-        final  = self._models_dir / source.filename
-        partial = self._models_dir / f".{source.filename}.partial"
-
-        # Already installed and valid?
-        if final.exists() and self._sha256_file(final) == source.sha256:
-            self.finished.emit(source.key)
-            return
-
-        # Resume from .partial if present
-        existing = partial.stat().st_size if partial.exists() else 0
-        req = urllib.request.Request(source.url)
-        if existing > 0:
-            req.add_header("Range", f"bytes={existing}-")
-
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            mode = "ab" if existing > 0 and resp.status == 206 else "wb"
-            if mode == "wb":
-                existing = 0           # server ignored Range; restart
-            with open(partial, mode) as f:
-                buf_size = 1024 * 1024
-                done = existing
-                while True:
-                    if self._cancel.is_set():
-                        raise RuntimeError("Cancelled")
-                    chunk = resp.read(buf_size)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    done += len(chunk)
-                    self.progress.emit(source.key, done, source.size_bytes)
-                f.flush()
-                os.fsync(f.fileno())
-
-        # Verify hash before promoting to final name
-        actual = self._sha256_file(partial)
-        if actual != source.sha256:
-            partial.unlink(missing_ok=True)
-            raise RuntimeError(f"Hash mismatch (expected {source.sha256}, got {actual})")
-
-        os.replace(partial, final)     # atomic
+        done = 0
+        for artifact in source.artifacts:
+            done += self._download_artifact(source, artifact, done)
         self.finished.emit(source.key)
 
     @staticmethod
@@ -660,7 +655,9 @@ class ModelDownloader(QObject):
 - Resume from `.partial` (truncate file, set `Range`, expect concatenation).
 - Hash mismatch → file removed, `failed` signal.
 - Already-installed-and-valid → instant `finished`, no network.
+- Bundle source installs into its expected directory layout.
 - Cancel mid-download → partial preserved, next call resumes.
+- Cancel applies only to the active download; queued items remain queued.
 - Server returns 200 instead of 206 → falls back to clean restart.
 - Atomic install: kill process between write and rename → on next launch the
   final file is either fully present-and-valid or missing, never corrupt.
@@ -1052,7 +1049,7 @@ requires-python = ">=3.10,<3.11"
 dependencies = [
     "PySide6>=6.7.0",
     "faster-whisper>=1.0.0",
-    "llama-cpp-python>=0.3.10",      # Gemma 3n GGUF — verified floor; spike before tagging
+    "llama-cpp-python>=0.3.10",      # Gemma 4 is the design default; exact minimum working release re-pinned by spike before tagging
     "onnxruntime>=1.17.0",            # Direct Silero VAD inference; also used by kokoro-onnx
     "sounddevice>=0.4.6",
     "soundfile>=0.12.1",
@@ -1114,7 +1111,7 @@ user-writable data remains outside the bundle under `platformdirs`.
    release pinning).
 8. `voicejournal/app/model_downloader.py` + `tests/test_model_downloader.py` — resume,
    atomic install, hash verify, cancel, queue.
-9. `voicejournal/app/model_registry.py` + `tests/test_registry.py` — sync fast-path; Gemma 3n→1B
+9. `voicejournal/app/model_registry.py` + `tests/test_registry.py` — sync fast-path; Gemma 4 E2B `Q8_0`→1B
    fallback on RuntimeError; cancel-on-session-start timer.
 10. `voicejournal/app/workers/_signals.py`.
 11. `voicejournal/app/core/audio.py` — capture-only callback; soxr resampler with `quality="HQ"`,
@@ -1152,9 +1149,11 @@ user-writable data remains outside the bundle under `platformdirs`.
 
 ## Top-level decisions locked in v6
 
-1. **Default LLM is Gemma 3n E2B IT (Q4_K_M GGUF)**, with automatic runtime
-   fallback to Gemma 3 1B IT on load failure. `llama-cpp-python>=0.3.10`
-   is the dep floor; verification spike required before tagging 0.1.0.
+1. **Default LLM is Gemma 4 E2B IT (`Q8_0` GGUF)**, with Gemma 4 E4B IT `Q4_K_M` as the
+    user-selectable upgrade and automatic runtime fallback to Gemma 3 1B IT on
+    load failure. `llama-cpp-python>=0.3.10` remains the current project floor,
+    but the minimum Gemma 4-capable release still must be re-recorded by the
+    verification spike before tagging 0.1.0.
 2. **VAD is `onnxruntime` + bundled, SHA256-pinned `silero_vad.onnx`.** No
    `silero-vad` PyPI dependency. Full ONNX I/O contract (`[1,576]` input
    with 64-sample context carry-over, persistent `[2,1,128]` state,

@@ -62,7 +62,7 @@ Core principles:
 | Data model | Local-first, repository-abstracted, SQLite in phase 1 |
 | Storage safety | SQLite `WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, single-instance lock |
 | Default STT | `faster-whisper` `base.en` |
-| Default LLM | Gemma 3n E2B IT Q4_K_M GGUF, with automatic fallback to Gemma 3 1B IT on load failure |
+| Default LLM | Gemma 4 E2B IT Q8_0 GGUF, with Gemma 4 E4B IT Q4_K_M as selectable upgrade and automatic fallback to Gemma 3 1B IT on load failure |
 | Default TTS | `kokoro-onnx` via `Kokoro.create(text, voice=..., speed=..., lang="en-us")` |
 | Default VAD | Bundled Silero ONNX through `onnxruntime`; no `silero-vad` PyPI dependency |
 | Theme system | Strict `string.Template` QSS templates loaded via `importlib.resources.files("voicejournal.assets")` |
@@ -75,9 +75,12 @@ Core principles:
 
 Required pre-release spike:
 
-- Before tagging `0.1.0`, verify that `llama-cpp-python==0.3.10` can load the
-  default Gemma 3n GGUF. If it cannot, update the minimum version or demote
-  Gemma 3n from default status in this file.
+- Before tagging `0.1.0`, start from the current project floor and bump
+  `llama-cpp-python` until a clean machine can load the official
+  `ggml-org/gemma-4-E2B-it-GGUF` default artifact `gemma-4-E2B-it-Q8_0.gguf`.
+  Record that minimum working release and the revalidated minimum supported RAM
+  guidance here. If no current release succeeds, update the minimum version or
+  demote Gemma 4 from default status in this file.
 
 ---
 
@@ -90,7 +93,7 @@ Required pre-release spike:
 | Resampler | `soxr>=0.4.0` | `ResampleStream`, variable output, flush with `last=True` |
 | VAD | `onnxruntime>=1.17.0` + bundled `silero_vad.onnx` | Direct ONNX inference |
 | STT | `faster-whisper>=1.0.0` | Local transcription |
-| LLM | `llama-cpp-python>=0.3.10` | Gemma 3n default, Gemma 3 1B fallback |
+| LLM | `llama-cpp-python>=0.3.10` | Gemma 4 E2B `Q8_0` default, Gemma 4 E4B `Q4_K_M` selectable, Gemma 3 1B fallback; exact Gemma 4 minimum release re-pinned before `0.1.0` |
 | TTS | `kokoro-onnx>=0.5.0` | Wrapped behind `TTSEngine.synthesize()` |
 | Rich text | `QTextEdit` | HTML is canonical storage/display format |
 | Markdown ingest | `markdown` | One-time markdown to HTML conversion |
@@ -410,7 +413,7 @@ Header:
 |--------------|-------|---------|--------|
 | ready | `New Entry` | yes | start session |
 | loading | `Loading models…` | no | none |
-| missing | `Set up models ->` | yes | open Settings -> Models |
+| missing | `Set up models ->` | yes | open Settings -> Downloads |
 | partial | `New Entry` | no | partial-install banner + Settings affordance |
 
 Additional rules:
@@ -535,6 +538,8 @@ Locked behavior:
 - left-rail tab layout
 - model rows reflect downloader state, progress, queue, cancel, retry, and
   manual placement info
+- Downloads tab exposes separate rows for the default Writing help model and
+  the optional Writing help Plus upgrade
 - Audio tab gates mic meter behind `Test microphone`
 - Appearance changes live-apply
 - one dialog-level privacy footer only
@@ -546,7 +551,7 @@ Locked behavior:
 The app is not done until these are true:
 
 1. Home -> Session -> Review -> Save works end to end.
-2. Missing-models state routes to Settings -> Models for both button click and
+2. Missing-models state routes to Settings -> Downloads for both button click and
    `Cmd/Ctrl+N`.
 3. Session trust states are visibly correct, including SPEAKING mic-muted cues.
 4. Review `Save when ready` works for both button click and `Cmd/Ctrl+S`.
@@ -561,7 +566,7 @@ The app is not done until these are true:
 Recommended release smoke flows:
 
 1. Cold launch -> onboarding -> models ready -> first session -> save.
-2. Relaunch with missing models -> Home shows `Set up models ->` -> `Cmd/Ctrl+N` opens Settings.
+2. Relaunch with missing models -> Home shows `Set up models ->` -> `Cmd/Ctrl+N` opens Settings -> Downloads.
 3. Session with photo prompt overlay -> `Esc` skips photo only.
 4. Review while prose is streaming -> `Cmd/Ctrl+S` captures save intent.
 5. macOS EntryViewer long vertical scroll with momentum -> no accidental prev/next navigation.

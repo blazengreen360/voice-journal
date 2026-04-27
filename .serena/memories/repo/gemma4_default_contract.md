@@ -1,0 +1,4 @@
+- Source-of-truth docs now lock official ggml-org Gemma 4 E2B Q8_0 as default, Gemma 4 E4B Q4_K_M as selectable upgrade, Gemma 3 1B as runtime fallback.
+- Missing-model route is Settings -> Downloads across plan/UX/wireframes.
+- Downloads surface uses separate user-facing rows: Writing help (default) and Writing help Plus (optional upgrade).
+- The clean-room release gate must re-pin both the minimum Gemma 4-capable llama-cpp-python version and minimum supported RAM guidance before 0.1.0.

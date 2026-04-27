@@ -10,6 +10,7 @@ from platformdirs import PlatformDirs
 
 APP_NAME = "VoiceJournal"
 APP_AUTHOR = "VoiceJournal"
+THEME_NAMES = frozenset({"light", "dark"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,3 +65,10 @@ class AppConfig:
 
     def assets_dir(self) -> Traversable:
         return files("voicejournal.assets")
+
+    def theme_asset(self, theme_name: str) -> Traversable:
+        normalized_name = theme_name.strip().lower()
+        if normalized_name not in THEME_NAMES:
+            valid_names = ", ".join(sorted(THEME_NAMES))
+            raise ValueError(f"Unsupported theme '{theme_name}'. Expected one of: {valid_names}")
+        return self.assets_dir().joinpath("style").joinpath(f"{normalized_name}.qss")

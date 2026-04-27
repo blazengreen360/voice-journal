@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import sys
 from pathlib import Path
 
@@ -25,18 +26,20 @@ class SingleInstanceLock:
             try:
                 msvcrt.locking(self._fh.fileno(), msvcrt.LK_NBLCK, 1)
             except OSError as exc:
-                self._fh.close()
-                self._fh = None
-                raise AlreadyRunningError(str(exc)) from exc
+                self._close_file_handle()
+                if _is_lock_contention_error(exc):
+                    raise AlreadyRunningError(str(exc)) from exc
+                raise
         else:
             import fcntl
 
             try:
                 fcntl.flock(self._fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError as exc:
-                self._fh.close()
-                self._fh = None
-                raise AlreadyRunningError(str(exc)) from exc
+                self._close_file_handle()
+                if _is_lock_contention_error(exc):
+                    raise AlreadyRunningError(str(exc)) from exc
+                raise
 
     def release(self) -> None:
         if self._fh is None:
@@ -52,5 +55,21 @@ class SingleInstanceLock:
 
                 fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
         finally:
-            self._fh.close()
-            self._fh = None
+            self._close_file_handle()
+
+    def _close_file_handle(self) -> None:
+        if self._fh is None:
+            return
+        self._fh.close()
+        self._fh = None
+
+
+def _is_lock_contention_error(exc: OSError) -> bool:
+    contention_errnos = {errno.EACCES, errno.EAGAIN, errno.EWOULDBLOCK}
+    contention_winerrors = {32, 33}
+    winerror = getattr(exc, "winerror", None)
+
+    if winerror is not None:
+        return winerror in contention_winerrors
+
+    return exc.errno in contention_errnos
