@@ -4,7 +4,7 @@ import argparse
 import atexit
 import os
 import sys
-from typing import Sequence
+from typing import Callable, Sequence
 
 from voicejournal.app.config import AppConfig
 from voicejournal.app.packaging_smoke import run_packaging_smoke
@@ -77,11 +77,27 @@ def _run_application_runtime(
     argv: Sequence[str],
     config_factory=AppConfig,
     lock_factory=SingleInstanceLock,
+    repo_factory=None,
+    reap_orphan_photo_dirs_fn=None,
+    maintain_fts_fn=None,
+    model_registry_factory=None,
+    theme_installer=None,
 ) -> int:
+    from voicejournal.app.core.local_repo import LocalRepo
+    from voicejournal.app.maintenance import maintain_fts, reap_orphan_photo_dirs
+    from voicejournal.app.model_registry import ModelRegistry
+    from voicejournal.app.ui.theme import install_app_theme
+
     qt_app = application_factory(list(argv))
 
     config = config_factory()
+    install_theme = install_app_theme if theme_installer is None else theme_installer
+    install_theme(qt_app, config)
     paths = config.ensure_directories()
+    make_repo = LocalRepo if repo_factory is None else repo_factory
+    reap_photos = reap_orphan_photo_dirs if reap_orphan_photo_dirs_fn is None else reap_orphan_photo_dirs_fn
+    keep_fts = maintain_fts if maintain_fts_fn is None else maintain_fts_fn
+    make_registry = ModelRegistry if model_registry_factory is None else model_registry_factory
 
     lock = lock_factory(paths.lock_file)
     try:
@@ -90,13 +106,37 @@ def _run_application_runtime(
         message_box.information(None, "VoiceJournal", ALREADY_RUNNING_MESSAGE)
         return 0
 
-    atexit.register(lock.release)
+    release_lock = _once(lock.release)
+    close_repo: Callable[[], None] = lambda: None
+    atexit.register(release_lock)
     try:
+        repo = make_repo(paths.database_file)
+        close_repo = _once(repo.close)
+        atexit.register(close_repo)
+        reap_photos(paths.photos_dir, repo)
+        keep_fts(repo)
+        registry = make_registry(config)
+
         qt_app.setApplicationName("VoiceJournal")
         qt_app.setOrganizationName("VoiceJournal")
 
-        window = window_factory()
+        window = window_factory(config=config, repo=repo, registry=registry)
         window.show()
+        registry.load_all()
         return qt_app.exec()
     finally:
-        lock.release()
+        close_repo()
+        release_lock()
+
+
+def _once(callback: Callable[[], None]) -> Callable[[], None]:
+    called = False
+
+    def wrapped() -> None:
+        nonlocal called
+        if called:
+            return
+        called = True
+        callback()
+
+    return wrapped

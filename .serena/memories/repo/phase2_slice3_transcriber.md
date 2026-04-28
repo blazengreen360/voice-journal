@@ -1,0 +1,7 @@
+- Phase 2 Slice 3 implemented in voicejournal/app/core/transcriber.py and voicejournal/app/workers/transcribe_worker.py.
+- Transcriber wraps a local faster-whisper WhisperModel and calls transcribe(...) with language='en', task='transcribe', beam_size=5, condition_on_previous_text=False, vad_filter=False, word_timestamps=False.
+- VAD-produced in-memory WAV buffers are passed directly; segments are forced to completion with list(...) and normalized into one transcript string.
+- NumPy input is intentionally narrow: one-dimensional finite float waveform only, normalized to [-1.0, 1.0]; integer PCM arrays are rejected.
+- ModelRegistry default whisper loader now uses load_transcriber_model to build a real Transcriber instead of returning a path.
+- tests/test_transcriber.py, tests/test_workers.py, and tests/test_registry.py cover core contract, cancel behavior, and default registry wiring.
+- Remaining future gap: add an executable smoke once a real local faster-whisper model directory is available in-repo for an end-to-end WAV-buffer transcription check.

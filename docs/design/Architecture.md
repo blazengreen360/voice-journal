@@ -16,11 +16,11 @@ Every `[BLOCKING]`, `[VERIFY]`, and `[GAP]` from critic05 is resolved.
 |---|------|---------|--------------|
 | 1 | TTS API | Wrong call: `tts.generate(text, voice_id=…)` → **`tts.create(text, voice=…, speed=…, lang="en-us")`** matching upstream `Kokoro.create()` ([source](https://github.com/thewh1teagle/kokoro-onnx/blob/main/src/kokoro_onnx/__init__.py)). `TTSEngine.synthesize()` wrapper insulates the rest of the app. `config.speech_rate` is now actually wired in. | A1 |
 | 2 | LLM default + dep floor | **Gemma 4 E2B IT `Q8_0` default** with **Gemma 4 E4B IT `Q4_K_M`** selectable and hard runtime fallback to Gemma 3 1B IT on `RuntimeError`. Official current llama.cpp docs list `ggml-org/gemma-4-E2B-it-GGUF` and `ggml-org/gemma-4-E4B-it-GGUF`, and upstream contains dedicated Gemma 4 chat-template/parser support. The earlier `llama-cpp-python==0.3.10` clean-room proof only covered Gemma 3n, so the minimum Gemma 4-capable release still has to be re-recorded before tagging 0.1.0. | A2 |
-| 3 | Silero VAD ONNX I/O | Underspec'd ("run Silero ONNX") → **full I/O contract**: `input` is `[1, 576]` float32 (= 64-sample carry-over context + 512 new samples at 16 kHz), `state` is `[2, 1, 128]` float32 carried across calls, `sr` is `[1]` int64. Context buffer + state reset on session boundary. 512-sample ring buffer in front of the resampler. Verified against [`utils_vad.py`](https://github.com/snakers4/silero-vad/blob/master/src/silero_vad/utils_vad.py) and [`silero-vad-onnx.cpp`](https://github.com/snakers4/silero-vad/blob/master/examples/cpp/silero-vad-onnx.cpp). | A3 |
+| 3 | Silero VAD ONNX I/O | Underspec'd ("run Silero ONNX") → **full I/O contract**: `input` is `[1, 576]` float32 (= 64-sample carry-over context + 512 new samples at 16 kHz), `state` is `[2, 1, 128]` float32 carried across calls, `sr` is `[1]` int64. Context buffer + state reset on session boundary. A downstream 512-sample ring buffer in the VAD worker accumulates queue chunks after any callback-side resampling. Verified against [`utils_vad.py`](https://github.com/snakers4/silero-vad/blob/master/src/silero_vad/utils_vad.py) and [`silero-vad-onnx.cpp`](https://github.com/snakers4/silero-vad/blob/master/examples/cpp/silero-vad-onnx.cpp). | A3 |
 | 4 | soxr semantics | "resample_chunk(chunk)" → **document variable output size**, **drain with `resample_chunk(np.zeros(0), last=True)` on stop**, `quality="HQ"`. Verified against [python-soxr docs](https://python-soxr.readthedocs.io/en/stable/). | A4 |
 | 5 | silero-vad rationale | "avoid torch" → **"reproducible installer + SHA256-pinned model"** (silero-vad v6.2.1, 2026-02-24, made ONNX runtime optional, weakening the torch-avoidance argument). | A5 |
 | 6 | LLM unload timer policy | Implicit → **Explicit**: only `MainWindow` touches the timer; only `SessionScreen` and `ReviewScreen` transitions affect it; `EntryViewer` and `SettingsDialog` do not. Long stays in those screens may force a `~5 s` reload on the next "New Entry" — the existing "Getting ready…" overlay covers it. | B1 |
-| 7 | Model downloader | One bullet ("download button + progress") → **`ModelDownloader` spec**: `MODEL_SOURCES` URL+SHA256+size table, HTTP `Range` resume, atomic `.partial → rename`, SHA256 verify before rename, cancel, serialised queue. Stdlib `urllib.request` + `hashlib`; no extra dependency. | B2 |
+| 7 | Model downloader | One bullet ("download button + progress") → **`ModelDownloader` spec**: `MODEL_SOURCES` URL+SHA256+size table, HTTP `Range` resume, atomic `.partial → rename`, SHA256 verify before rename, cancel, serialised queue. `urllib.request` + `hashlib` with an explicit `certifi` CA bundle for HTTPS verification. | B2 |
 | 8 | SQLite durability + concurrency | None → **WAL + single-instance lock**: `PRAGMA journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON` set on every connection. Cross-platform single-instance lock (`fcntl.flock` POSIX, `msvcrt.locking` Windows) on `journal.db.lock`. README warning against cloud-synced data folders. | B3 |
 | 9 | Worker signals test | "test cancellation" → **also assert `isinstance(worker.signals, QObject)` per worker + smoke-connect a slot to each signal**. Catches the silent regression where a future refactor moves a `Signal()` directly onto a `QRunnable`. | B4 |
 
@@ -106,13 +106,21 @@ banner; the user can pick either Gemma 4 profile in Settings.
 ```python
 # tts.py — single source of truth
 VOICE_MAP = {
-    "Lucy":  "af_bella",     # American English F, grade A
-    "Allen": "am_michael",   # American English M, grade B
+    "Lucy":  "af_sarah",     # calmer American English F preset
+    "Allen": "am_echo",      # calmer American English M preset
+}
+
+VOICE_BLEND_MAP = {
+    "Lucy":  (("af_sarah", 0.60), ("af_nicole", 0.25), ("af_heart", 0.15)),
+    "Allen": (("am_echo", 0.55), ("am_liam", 0.30), ("am_eric", 0.15)),
 }
 ```
 
-UI shows "Lucy" / "Allen". On missing voice ID at runtime (corrupt model
-file), `TTSEngine` falls back to the first available voice and logs a warning.
+UI shows "Lucy" / "Allen". `TTSEngine` resolves those to blended Kokoro voice
+styles when all blend components are present, and degrades to the base preset
+voice if the extra blend components are missing. If the resolved preset voice
+ID is missing entirely at runtime, synthesis falls back to the first available
+voice and logs a warning.
 
 **First-run download budget:** ~5.24 GB total for the default stack (Whisper
 ~150 MB directory bundle + Gemma 4 E2B `Q8_0` 4,967,494,592 bytes + Kokoro int8 model
@@ -125,7 +133,7 @@ shown in Settings → Manual Installation. Single-file sources go directly in
 `config.models_dir`; bundle-backed sources go under their install directory
 inside `config.models_dir` (for example `faster-whisper-base.en/config.json`
 and `kokoro-v1.0/voices-v1.0.bin`). App detects by expected path and skips
-download when every required artifact is present.
+download when every required artifact is present and its pinned SHA256 matches.
 
 **Minimum system requirement:** re-validate before `0.1.0`; the earlier 8 GB
 note was written against the smaller Gemma 3n default and is no longer treated
@@ -178,9 +186,7 @@ VoiceJournal/
 │   │   │
 │   │   └── workers/
 │   │       ├── _signals.py        # WorkerSignals(QObject) — shared signal classes
-│   │       ├── whisper_loader.py
-│   │       ├── llm_loader.py
-│   │       ├── tts_loader.py
+│   │       ├── loaders.py         # Whisper/LLM/TTS loader QRunnables
 │   │       ├── transcribe_worker.py
 │   │       ├── llm_worker.py
 │   │       └── tts_worker.py
@@ -444,6 +450,7 @@ class ModelRegistry(QObject):
     whisper_ready = Signal()
     llm_ready     = Signal()      # Re-emitted on every successful ensure_llm_loaded(),
                                   # even if the model was already in memory.
+    llm_fallback  = Signal(str, str)  # (requested_model_name, fallback_model_name)
     tts_ready     = Signal()
     all_ready     = Signal()
     load_error    = Signal(str, str)  # (model_name, message)
@@ -452,9 +459,9 @@ class ModelRegistry(QObject):
 
     def load_all(self) -> None:
         """Submit Whisper, LLM, TTS loaders in parallel (QThreadPool).
-        LLM loader catches RuntimeError / unsupported-arch errors and
+        LLM loader catches load failures from the selected Gemma 4 model and
         retries once with the configured fallback model (Gemma 3 1B IT),
-        then emits load_error if both fail."""
+        emits llm_fallback on successful downgrade, then emits load_error if both fail."""
 
     def ensure_llm_loaded(self) -> bool:
         """
@@ -543,7 +550,7 @@ class ModelSource:
 MODEL_SOURCES: dict[str, ModelSource] = {
     "whisper-base.en": ModelSource(
         key="whisper-base.en",
-        display="Whisper base.en",
+        display="Speech recognition",
         install_dir="faster-whisper-base.en",
         artifacts=(
             ModelArtifact(filename="config.json", url="https://huggingface.co/Systran/faster-whisper-base.en/resolve/main/config.json", ...),
@@ -554,21 +561,21 @@ MODEL_SOURCES: dict[str, ModelSource] = {
     ),
     "gemma-4-E2B-it-Q8_0": ModelSource.single_file(
         key="gemma-4-E2B-it-Q8_0",
-        display="Gemma 4 E2B IT (Q8_0)",
+        display="Writing help",
         filename="gemma-4-E2B-it-Q8_0.gguf",
         url="https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q8_0.gguf",
-        sha256="<TBD-FILL-AT-RELEASE>",
+        sha256="<pinned SHA256>",
         size_bytes=4_967_494_592,
     ),
     "gemma-4-E4B-it-Q4_K_M": ModelSource.single_file(
         key="gemma-4-E4B-it-Q4_K_M",
-        display="Gemma 4 E4B IT (Q4_K_M)",
+        display="Writing help Plus",
         filename="gemma-4-E4B-it-Q4_K_M.gguf",
         url="https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
-        sha256="<TBD-FILL-AT-RELEASE>",
+        sha256="<pinned SHA256>",
         size_bytes=5_335_289_824,
     ),
-    "gemma-3-1B-it-Q4_K_M":   ModelSource.single_file(...),    # fallback model
+    "gemma-3-1b-it-Q4_K_M":   ModelSource.single_file(...),    # fallback model
     "kokoro-v1.0":            ModelSource(
         install_dir="kokoro-v1.0",
         artifacts=(
@@ -584,16 +591,16 @@ MODEL_SOURCES: dict[str, ModelSource] = {
 not an arbitrary renamed `model.bin`, so the Speech recognition source installs
 the full `faster-whisper-base.en/` directory under `config.models_dir`.
 
-`<TBD-FILL-AT-RELEASE>` values are pinned by the release engineer at tag time
-by downloading once and recording the hash; release validation verifies that
-each pinned hash still matches the URL before packaging. If a hash drifts
-(model author re-uploads), the release is blocked until the table is reviewed.
+Release hashes are pinned in `voicejournal/app/model_sources.py` and release
+validation spot-checks that the upstream artifacts still match those pinned
+values before packaging. If a hash drifts (for example, an upstream model is
+re-uploaded), the release is blocked until the table is reviewed.
 
 ### Download mechanism
 
 ```python
 class ModelDownloader(QObject):
-    progress    = Signal(str, int, int)  # (key, bytes_done, bytes_total)
+    progress    = Signal(str, object, object)  # (key, bytes_done, bytes_total) as Python ints
     finished    = Signal(str)            # (key)
     failed      = Signal(str, str)       # (key, message)
 
@@ -602,6 +609,7 @@ class ModelDownloader(QObject):
         self._cancel = threading.Event()
         self._queue: deque[ModelSource] = deque()
         self._active_thread: threading.Thread | None = None
+        self._active_key: str | None = None
         self._lock = threading.Lock()
 
     def enqueue(self, source: ModelSource) -> None:
@@ -614,20 +622,33 @@ class ModelDownloader(QObject):
                 self._active_thread = threading.Thread(target=self._run, daemon=True)
                 self._active_thread.start()
 
-    def cancel(self) -> None:
-        """Cancel the active download. Partial file is kept on disk for resume."""
-        self._cancel.set()
+    def cancel(self, key: str | None = None) -> None:
+        """Cancel the current active download only when the requested key still matches.
+        Partial files are kept on disk for resume."""
+        with self._lock:
+            if self._active_key is None:
+                return
+            if key is not None and key != self._active_key:
+                return
+            self._cancel.set()
 
     def _run(self) -> None:
         while True:
             with self._lock:
                 if not self._queue:
+                    self._active_key = None
                     return
                 source = self._queue.popleft()
+                self._active_key = source.key
             try:
                 self._download_one(source)
             except Exception as e:
                 self.failed.emit(source.key, str(e))
+            finally:
+                with self._lock:
+                    if self._active_key == source.key:
+                        self._active_key = None
+                    self._cancel.clear()
 
     def _download_one(self, source: ModelSource) -> None:
         done = 0
@@ -649,7 +670,8 @@ class ModelDownloader(QObject):
 - Downloads are **serialised** (one at a time) via the internal queue.
   Settings UI disables further "Download" buttons while a download is active
   except an "Add to queue" affordance for the others, mirroring the queue.
-- Cancel applies only to the active download; queued items remain queued.
+- Cancel is keyed to the currently active download; queued items remain queued
+    and stale cancel clicks cannot bleed into the next queued item.
 - Hash failure deletes the `.partial` so the next attempt starts fresh.
 - Server `200` (Range ignored) restarts cleanly from byte 0.
 
@@ -683,20 +705,36 @@ class AudioStream:
                 samplerate=16000, channels=1, dtype='float32',
                 blocksize=512, callback=self._callback, device=config.audio_device,
             )
+            self._native_rate = float(self._stream.samplerate)
         except sd.PortAudioError:
-            info = sd.query_devices(config.audio_device or sd.default.device[0])
-            self._native_rate = int(info['default_samplerate'])
+            if config.audio_device is not None:
+                info = sd.query_devices(config.audio_device, kind='input')
+            elif sd.default.device[0] in (None, -1):
+                info = sd.query_devices(kind='input')
+            else:
+                info = sd.query_devices(sd.default.device[0], kind='input')
+            self._native_rate = float(info['default_samplerate'])
             self._stream = sd.InputStream(
                 samplerate=self._native_rate, channels=1, dtype='float32',
                 blocksize=512, callback=self._callback, device=config.audio_device,
             )
+            self._native_rate = float(self._stream.samplerate)
+
+        if self._native_rate != 16000:
             self._resampler = soxr.ResampleStream(
                 self._native_rate, 16000, 1, dtype="float32", quality="HQ",
             )
 
+    def start(self) -> None:
+        self._stream.start()
+
     def _callback(self, indata, frames, time, status):
         # Realtime audio thread — keep work TINY.
         chunk = indata[:, 0].copy()
+        if self._resampler is not None:
+            chunk = self._resampler.resample_chunk(chunk, last=False)
+        if chunk.size == 0:
+            return
         try:
             self._vad_queue.put_nowait(chunk)
         except queue.Full:
@@ -855,12 +893,77 @@ against `_infer()`'s returned probability.
 
 ---
 
+## Transcriber (`transcriber.py` + `transcribe_worker.py`)
+
+`Transcriber` wraps a locally loaded `faster-whisper` `WhisperModel` and
+accepts the in-memory WAV buffers emitted by `VADWorker.on_speech_end(...)`
+directly. The worker does **not** round-trip through temporary files. A NumPy
+input is only supported when it is already a one-dimensional normalized float
+waveform.
+
+`Transcriber.transcribe(audio)` uses the local model directory already loaded
+from `config.models_dir/faster-whisper-base.en/` and calls:
+
+```python
+segments, info = whisper_model.transcribe(
+        audio,
+        language="en",
+        task="transcribe",
+        beam_size=5,
+        condition_on_previous_text=False,
+        vad_filter=False,
+        word_timestamps=False,
+)
+segments = list(segments)  # force lazy generator to completion here
+```
+
+Design rationale:
+
+- `language="en"` because the default shipped STT model is `base.en`.
+- `condition_on_previous_text=False` because each user turn is already cut by
+    our own VAD worker and should transcribe independently without cross-turn
+    prompt bleed.
+- `vad_filter=False` because VoiceJournal already performs explicit Silero VAD
+    before STT and should not add a second silence filter with different cut
+    behavior.
+- `segments` are normalized into one stable transcript string by collapsing
+    whitespace after concatenation.
+
+`TranscribeWorker` is a standard `QRunnable` with a `TranscribeWorkerSignals`
+companion `QObject`. Success emits `result(...)`, failures emit `error(str)`,
+pre-start cancellation emits no terminal payload, and every path emits
+`done()` in `finally`, matching the shared worker-signal contract.
+
+---
+
 ## LLM Prompt Design
 
-Unchanged from v5: `"question"` non-streaming JSON; `"prose"` streaming;
-`"metadata"` streaming JSON. `summarize`-substring scan precedes JSON parse
-in `"question"` handling. SessionScreen enforces `user_turn_count() >= 3`
-before honouring a summarize decision.
+`LLMEngine` wraps a local `llama_cpp.Llama` instance loaded from the selected
+GGUF path with `n_ctx=4096` and `verbose=False`.
+
+The engine exposes three call types:
+
+- `question(messages)` → non-streaming JSON result with keys
+    `next_question`, `summarize`, and optional `summarize_probability`.
+- `stream_prose(messages)` → streaming HTML text chunks for the Review body.
+- `stream_metadata(messages)` → streaming JSON text for `title`, `mood`, and
+    `tags`; the worker accumulates the chunks and parses the final JSON object.
+
+`question()` and `stream_metadata()` call `create_chat_completion(...,
+response_format={"type": "json_object"})`. `stream_prose()` uses streaming
+chat completion without JSON mode. `question()` still salvages malformed raw
+responses by checking preamble text and `summarize: true` hints before giving
+up on JSON parsing, but valid JSON remains authoritative when it parses cleanly.
+
+`LLMWorker` uses the shared `LLMWorkerSignals` companion object:
+
+- `question` emits only `result(...)` + `done()`.
+- `prose` and `metadata` emit incremental `chunk(str)` updates, then a final
+    `result(...)`, then `done()`.
+- Pre-start cancellation emits only `done()` and performs no model call.
+
+SessionScreen still enforces `user_turn_count() >= 3` before honouring a
+summarize decision.
 
 ---
 
@@ -877,15 +980,31 @@ from kokoro_onnx import Kokoro
 import numpy as np
 
 VOICE_MAP = {
-    "Lucy":  "af_bella",
-    "Allen": "am_michael",
+    "Lucy":  "af_sarah",
+    "Allen": "am_echo",
+}
+
+VOICE_BLEND_MAP = {
+    "Lucy":  (("af_sarah", 0.60), ("af_nicole", 0.25), ("af_heart", 0.15)),
+    "Allen": (("am_echo", 0.55), ("am_liam", 0.30), ("am_eric", 0.15)),
 }
 
 class TTSEngine:
-    def __init__(self, model_path: str, voices_path: str) -> None:
+    def __init__(
+        self,
+        model_path: str,
+        voices_path: str,
+        *,
+        kokoro_factory: Callable[..., object] | None = None,
+    ) -> None:
         self._kokoro = Kokoro(model_path, voices_path)
-        # Build display-name → voice-id map, with safe fallback
-        self._available = set(self._kokoro.get_voices())
+        self._available = tuple(self._kokoro.get_voices())
+        configured_voice_ids = {DEFAULT_VOICE_ID, *VOICE_MAP.values()}
+        missing = sorted(configured_voice_ids - set(self._available))
+        if missing:
+            log.warning("Configured Kokoro voices missing from bundle: %s",
+                        ", ".join(missing))
+        self._voice_styles = self._build_voice_styles()
 
     def synthesize(
         self,
@@ -898,49 +1017,85 @@ class TTSEngine:
         verified signature: create(text, voice=str|ndarray, speed=float,
         lang=str, is_phonemes=bool, trim=bool) -> tuple[ndarray, int].
         """
-        voice_id = VOICE_MAP.get(voice_name, "af_bella")
-        if voice_id not in self._available:
+        voice_style = self._voice_styles.get(
+            voice_name,
+            VOICE_MAP.get(voice_name, "af_sarah"),
+        )
+        if isinstance(voice_style, str) and voice_style not in self._available:
+            fallback_voice = self._available[0]
             log.warning("Voice %s missing; falling back to %s",
-                        voice_id, next(iter(self._available)))
-            voice_id = next(iter(self._available))
+                        voice_style, fallback_voice)
+            voice_style = fallback_voice
         # Clamp per Kokoro's documented assert (0.5 ≤ speed ≤ 2.0)
         speed = max(0.5, min(2.0, speed))
         return self._kokoro.create(
             text,
-            voice=voice_id,
+            voice=voice_style,
             speed=speed,
             lang="en-us",
         )
 ```
 
+`_build_voice_styles()` uses `Kokoro.get_voice_style()` to construct the
+weighted preset blends at startup. If any non-base blend component is missing,
+the preset logs a warning and falls back to the base preset voice for that
+label instead of failing the whole TTS path.
+
 ### `TTSWorker.run()` (`voicejournal/app/workers/tts_worker.py`)
 
 ```python
 def run(self) -> None:
+    chunks = _split_for_streaming(self._text)
+    out = None
     try:
-        samples, sample_rate = self._engine.synthesize(
-            self._text,
-            voice_name=self._voice_name,
-            speed=self._config.speech_rate,        # ← config.speech_rate now actually used
-        )
-        if self._cancel.is_set():
-            return
-        self.signals.started.emit()
-
-        with sd.OutputStream(samplerate=sample_rate, channels=1, dtype="float32") as out:
-            block = 1024
+        for index, chunk in enumerate(chunks):
+            samples, sample_rate = self._engine.synthesize(
+                chunk,
+                voice_name=self._voice_name,
+                speed=self._config.speech_rate,
+            )
+            audio = _shape_audio_edges(
+                samples,
+                sample_rate,
+                fade_in=index == 0,
+                fade_out=False,
+            )
+            if index == len(chunks) - 1:
+                audio = _suppress_final_tail(audio, sample_rate)
+                audio = _append_tail_silence(audio, sample_rate)
+            if out is None:
+                self.signals.started.emit()
+                output_sample_rate = sample_rate
+                out = sd.OutputStream(samplerate=sample_rate, channels=1, dtype="float32")
+                out.__enter__()
+            elif sample_rate != output_sample_rate:
+                raise RuntimeError(
+                    f"TTS sample rate changed between chunks: {output_sample_rate} -> {sample_rate}"
+                )
             i = 0
-            while i < len(samples):
+            while i < len(audio):
                 if self._cancel.is_set():
                     break
-                end = min(i + block, len(samples))
-                out.write(samples[i:end])
+                end = min(i + 1024, len(audio))
+                out.write(audio[i:end])
                 i = end
     except Exception as e:
         self.signals.error.emit(str(e))
     finally:
+        if out is not None:
+            out.__exit__(None, None, None)
         self.signals.done.emit()
 ```
+
+`_split_for_streaming()` now splits only on sentence-ending punctuation. That
+keeps the first-audio benefit for multi-sentence replies, while leaving
+comma-heavy clauses intact so Kokoro can preserve more of the original prosody
+inside each synthesis call.
+
+`_suppress_final_tail()` applies a longer cubic fade only to the last portion
+of the final playback chunk before the appended silence. This is specifically
+to suppress low-level synthesized tail noise without muting the middle of the
+utterance or changing non-final chunk boundaries.
 
 > **`done` signal contract** (unchanged from v5): fires exactly once per
 > `run()`, regardless of outcome. `SessionScreen` connects `done` (not
@@ -955,9 +1110,11 @@ and passed through on every call. v5 declared the setting but never wired it.
 
 Unchanged from v5 except:
 
-- `SettingsDialog` "Language Model" row gains a **download progress bar**
-  driven by `ModelDownloader.progress(key, done, total)` for the active key.
-  "Download" / "Cancel" / "Add to queue" buttons reflect downloader state.
+- `SettingsDialog` Downloads rows gain **download progress bars** driven by
+    `ModelDownloader.progress(key, done, total)` for the active key, with
+    separate rows for Speech recognition, Writing help, Writing help fallback,
+    Writing help Plus, and Voice replies. `Download` / `Cancel` / `Add to queue` buttons reflect the
+    downloader state per row.
 - `SettingsDialog` "Voice" row's speech-rate slider is now bound to
   `config.speech_rate` (was decorative in v5).
 
@@ -1004,10 +1161,14 @@ The smoke test also doubles as a check that `done` fires on every code path
 5. `maintenance.reap_orphan_photo_dirs(config.photos_dir, repo)`.
 6. `maintenance.maintain_fts(repo)`.
 7. `ModelRegistry(config)`; connect signals.
-8. Show `MainWindow` → `HomeScreen` immediately.
+8. During Phase 1, show `MainWindow(config, repo, registry)` as the scaffold
+   shell immediately. Phase 3 replaces the placeholder central widget with
+   `HomeScreen` while preserving the same injected `config` / `repo` /
+   `registry` startup ownership.
 9. `registry.load_all()`.
-10. `HomeScreen` connects `registry.all_ready` → enable "New Entry";
-    `registry.load_error` → red dot + banner.
+10. In the later Home slice, `HomeScreen` connects `registry.all_ready` →
+    enable "New Entry"; `registry.load_error` → red dot + banner;
+    `registry.llm_fallback` → one-time downgrade banner.
 
 `atexit` registers `lock.release()` and `repo.close()`.
 

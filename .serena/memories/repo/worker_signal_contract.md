@@ -1,0 +1,3 @@
+- Slice 5 establishes worker signal companions in voicejournal/app/workers/_signals.py: signals live on QObject subclasses, never directly on QRunnable.
+- tests/test_workers.py uses minimal QRunnable wrappers plus QThreadPool and QCoreApplication, not pytest-qt, to smoke-test related signals and exact-once done on success, error, and cancel paths.
+- When real worker classes land, extend the same smoke coverage to each concrete worker class at the actual `.signals` wiring point.

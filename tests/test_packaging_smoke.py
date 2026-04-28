@@ -25,10 +25,15 @@ def test_build_packaging_smoke_report_checks_both_themes(tmp_path, monkeypatch) 
     monkeypatch.setattr("voicejournal.app.packaging_smoke.AppConfig", FakeConfig)
     monkeypatch.setattr("voicejournal.app.packaging_smoke.bundled_silero_vad_model", lambda: model_path)
     monkeypatch.setattr("voicejournal.app.packaging_smoke.SILERO_VAD_SHA256", "651bfad0aa5b42c5a5b8dad76f49c4a122fe1d1658fc55cfdd1ea9923fe3fd9e")
+    certifi_bundle = tmp_path / "cacert.pem"
+    certifi_bundle.write_text("bundle", encoding="utf-8")
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.certifi.where", lambda: str(certifi_bundle))
 
     report = build_packaging_smoke_report()
 
     assert report["ok"] is True
+    assert report["certifi_bundle_exists"] is True
+    assert report["certifi_bundle_path"] == str(certifi_bundle)
     assert report["light_theme_exists"] is True
     assert report["dark_theme_exists"] is True
     assert report["light_theme_contains_token"] is True
@@ -60,6 +65,7 @@ def test_build_packaging_smoke_report_fails_on_model_hash_mismatch(tmp_path, mon
     monkeypatch.setattr("voicejournal.app.packaging_smoke.AppConfig", FakeConfig)
     monkeypatch.setattr("voicejournal.app.packaging_smoke.bundled_silero_vad_model", lambda: model_path)
     monkeypatch.setattr("voicejournal.app.packaging_smoke.SILERO_VAD_SHA256", "not-the-right-hash")
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.certifi.where", lambda: str(model_path))
 
     report = build_packaging_smoke_report()
 
@@ -88,6 +94,7 @@ def test_build_packaging_smoke_report_fails_when_dark_theme_lacks_token(tmp_path
     monkeypatch.setattr("voicejournal.app.packaging_smoke.AppConfig", FakeConfig)
     monkeypatch.setattr("voicejournal.app.packaging_smoke.bundled_silero_vad_model", lambda: model_path)
     monkeypatch.setattr("voicejournal.app.packaging_smoke.SILERO_VAD_SHA256", "651bfad0aa5b42c5a5b8dad76f49c4a122fe1d1658fc55cfdd1ea9923fe3fd9e")
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.certifi.where", lambda: str(model_path))
 
     report = build_packaging_smoke_report()
 
@@ -97,7 +104,7 @@ def test_build_packaging_smoke_report_fails_when_dark_theme_lacks_token(tmp_path
     assert report["theme_contains_token"] is False
 
 
-def test_build_packaging_smoke_report_captures_read_errors(monkeypatch) -> None:
+def test_build_packaging_smoke_report_captures_read_errors(tmp_path, monkeypatch) -> None:
     class BrokenAsset:
         def __init__(self, label: str, *, read_text_error: Exception | None = None, read_bytes_error: Exception | None = None) -> None:
             self._label = label
@@ -135,6 +142,9 @@ def test_build_packaging_smoke_report_captures_read_errors(monkeypatch) -> None:
         "voicejournal.app.packaging_smoke.bundled_silero_vad_model",
         lambda: BrokenAsset("silero_vad.onnx", read_bytes_error=OSError("no bytes")),
     )
+    certifi_bundle = tmp_path / "cacert.pem"
+    certifi_bundle.write_text("bundle", encoding="utf-8")
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.certifi.where", lambda: str(certifi_bundle))
 
     report = build_packaging_smoke_report()
 
@@ -144,6 +154,36 @@ def test_build_packaging_smoke_report_captures_read_errors(monkeypatch) -> None:
     assert report["model_sha256"] is None
     assert len(report["read_errors"]) == 2
     assert report["error"] is not None
+
+
+def test_build_packaging_smoke_report_fails_when_certifi_bundle_is_missing(tmp_path, monkeypatch) -> None:
+    assets_dir = tmp_path / "assets"
+    style_dir = assets_dir / "style"
+    style_dir.mkdir(parents=True)
+    (style_dir / "light.qss").write_text("${surface}\n", encoding="utf-8")
+    (style_dir / "dark.qss").write_text("${surface}\n", encoding="utf-8")
+    model_path = assets_dir / "models" / "silero_vad.onnx"
+    model_path.parent.mkdir(parents=True)
+    model_path.write_bytes(b"vad")
+
+    class FakeConfig:
+        def assets_dir(self):
+            return assets_dir
+
+        def theme_asset(self, theme_name: str):
+            return style_dir / f"{theme_name}.qss"
+
+    missing_bundle = tmp_path / "missing-cacert.pem"
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.AppConfig", FakeConfig)
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.bundled_silero_vad_model", lambda: model_path)
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.SILERO_VAD_SHA256", "651bfad0aa5b42c5a5b8dad76f49c4a122fe1d1658fc55cfdd1ea9923fe3fd9e")
+    monkeypatch.setattr("voicejournal.app.packaging_smoke.certifi.where", lambda: str(missing_bundle))
+
+    report = build_packaging_smoke_report()
+
+    assert report["ok"] is False
+    assert report["certifi_bundle_exists"] is False
+    assert report["error"] == f"Missing certifi CA bundle at {missing_bundle}"
 
 
 def test_run_packaging_smoke_prints_json_when_output_write_fails(tmp_path, monkeypatch, capsys) -> None:

@@ -1,0 +1,9 @@
+- Slice 4 implemented voicejournal/app/model_sources.py and voicejournal/app/model_downloader.py with tests in tests/test_model_downloader.py.
+- Model sources are logical download rows, not always single files: Speech recognition is a faster-whisper CTranslate2 directory bundle under models/faster-whisper-base.en/; Voice replies is a Kokoro bundle under models/kokoro-v1.0/; Writing help, Writing help Plus, and the Gemma 3 fallback remain single-file GGUF sources.
+- ModelSource contract: display is the approved Settings row label, artifacts carry filename/url/sha256/size_bytes, bundle sources require install_dir, and size_bytes is the total across artifacts.
+- ModelDownloader contract: QObject-based, stdlib-only, Python-int progress payloads, serial queue, active-only cancel, HTTP Range resume, 200-ignores-Range restart, valid-final and valid-partial fast paths, corrupt full-size partial reset, per-artifact SHA256 verification, partial deletion on mismatch, os.replace() promotion, and bundle installs into directory layout.
+- Release-placeholder contract: UNPINNED_SHA256 entries fail fast before any network, including mixed-pin bundles; docs updated to say development builds require release pinning before real downloads.
+- Design docs aligned: Architecture, UX, and VOICEJOURNAL_WIREFRAMES_FINAL now match bundle installs, manual-install guidance, hash-verified installed wording, cancel/add-to-queue semantics, progress payload shape, and Settings row labels.
+- Focused validation: ./.venv/bin/python -m pytest -q tests/test_model_downloader.py -> 15 passed.
+- Final VoiceJournal Reviewer signoff returned no findings.
+- Residual risk: tests do not yet explicitly cover bundle valid-installed or bundle valid-partial no-network fast paths, though manual probe matched expected behavior.

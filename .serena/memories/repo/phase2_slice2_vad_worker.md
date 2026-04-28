@@ -1,0 +1,7 @@
+- Phase 2 Slice 2 implemented in voicejournal/app/core/vad.py.
+- VADWorker consumes 16 kHz float32 chunks from vad_queue, accumulates exact 512-sample frames, prepends 64-sample context, and calls injected onnxruntime session with input/state/sr tensors.
+- reset_for_new_session() clears ONNX state, context, ring, and in-flight speech segment state.
+- set_muted(True) intentionally drops partial/ring state so assistant playback cannot leak into the next user turn.
+- VADParams uses threshold default 0.5; negative threshold floor is 0.01 so threshold=0.1 can still end speech.
+- tests/test_vad.py includes fake-session coverage, threaded survivability checks for inference/callback errors, reset regression, and a real bundled Silero ONNX smoke via onnxruntime.
+- Remaining future decision: explicit policy for stop() while a speech segment is still in progress (flush vs discard) before Session finish-path integration.

@@ -1,0 +1,7 @@
+- Phase 2 Slice 4 implemented in voicejournal/app/core/tts.py and voicejournal/app/workers/tts_worker.py.
+- TTSEngine wraps kokoro-onnx Kokoro.create(text, voice=..., speed=..., lang='en-us'), uses VOICE_MAP {'Lucy': 'af_bella', 'Allen': 'am_michael'}, clamps speed to 0.5-2.0, and falls back to the first available voice with a warning.
+- AppConfig now exposes speech_rate=1.0 default; TTSWorker passes config.speech_rate into engine.synthesize.
+- TTSWorker now honors pre-start cancellation before synthesis, checks cancel again before playback and between blocks, emits started before OutputStream playback, error on synth/open/write failures, and done exactly once on every path.
+- ModelRegistry default tts_loader now uses load_tts_engine to build a real TTSEngine instead of returning a path placeholder.
+- tests/test_tts.py, tests/test_workers.py, tests/test_registry.py, and tests/test_config.py cover wrapper behavior, playback worker signal/error paths, registry default wiring, and the speech_rate seam.
+- Remaining future gap: add an executable smoke against a real local Kokoro bundle and real OutputStream when model artifacts are available locally.

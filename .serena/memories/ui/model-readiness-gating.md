@@ -1,0 +1,4 @@
+- MainWindow should only mark Home ready and auto-open pending sessions on registry.all_ready, not llm_ready alone.
+- Allowing SessionScreen to open before TTS/transcriber load can produce a silent first assistant turn or typed-only fallback.
+- If a model load fails, clear _pending_session_start so a later successful retry does not auto-open a session without a fresh user click.
+- Partial model failures should route the New Entry button back to Settings instead of leaving a disabled New Entry affordance.

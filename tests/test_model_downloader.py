@@ -3,18 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 from pathlib import Path
+import re
 import time
 
 import pytest
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QApplication
 
 from voicejournal.app import model_downloader as model_downloader_module
-from voicejournal.app.model_downloader import ModelDownloader
+from voicejournal.app.model_downloader import DOWNLOAD_CANCELLED_MESSAGE, ModelDownloader
 from voicejournal.app.model_sources import (
     DEFAULT_SPEECH_RECOGNITION_MODEL_KEY,
     DEFAULT_WRITING_HELP_MODEL_KEY,
     FALLBACK_WRITING_HELP_MODEL_KEY,
     MODEL_SOURCES,
+    UNPINNED_SHA256,
     VOICE_REPLY_MODEL_KEY,
     WRITING_HELP_PLUS_MODEL_KEY,
     ModelArtifact,
@@ -72,7 +74,7 @@ class FakeUrlOpen:
         self._resources = resources
         self.requests: list[tuple[str, str | None]] = []
 
-    def __call__(self, request, timeout: int = 30) -> FakeResponse:
+    def __call__(self, request, timeout: int = 30, context=None) -> FakeResponse:
         assert timeout == 30
         url = request.full_url
         headers = {name.lower(): value for name, value in request.header_items()}
@@ -98,10 +100,10 @@ class FakeUrlOpen:
 
 
 @pytest.fixture()
-def qapp() -> QCoreApplication:
-    app = QCoreApplication.instance()
+def qapp() -> QApplication:
+    app = QApplication.instance()
     if app is None:
-        app = QCoreApplication([])
+        app = QApplication([])
     return app
 
 
@@ -137,7 +139,7 @@ def _bundle_source(key: str, install_dir: str, files: list[tuple[str, str, bytes
     )
 
 
-def _wait_until(predicate, qapp: QCoreApplication, timeout: float = 3.0) -> None:
+def _wait_until(predicate, qapp: QApplication, timeout: float = 3.0) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         qapp.processEvents()
@@ -155,6 +157,7 @@ def _is_idle(downloader: ModelDownloader) -> bool:
 
 def test_model_sources_define_required_downloads() -> None:
     speech = MODEL_SOURCES[DEFAULT_SPEECH_RECOGNITION_MODEL_KEY]
+    assert speech.display == "Speech recognition"
     assert speech.install_dir == "faster-whisper-base.en"
     assert speech.filenames == (
         "config.json",
@@ -165,23 +168,27 @@ def test_model_sources_define_required_downloads() -> None:
     assert speech.artifacts[1].url == (
         "https://huggingface.co/Systran/faster-whisper-base.en/resolve/main/model.bin"
     )
-    assert speech.size_bytes == 150_518_441
+    assert speech.size_bytes == 147_769_510
     assert MODEL_SOURCES[DEFAULT_WRITING_HELP_MODEL_KEY].filename == "gemma-4-E2B-it-Q8_0.gguf"
+    assert MODEL_SOURCES[DEFAULT_WRITING_HELP_MODEL_KEY].display == "Writing help"
     assert MODEL_SOURCES[DEFAULT_WRITING_HELP_MODEL_KEY].url == (
         "https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q8_0.gguf"
     )
     assert MODEL_SOURCES[DEFAULT_WRITING_HELP_MODEL_KEY].size_bytes == 4_967_494_592
     assert MODEL_SOURCES[WRITING_HELP_PLUS_MODEL_KEY].filename == "gemma-4-E4B-it-Q4_K_M.gguf"
+    assert MODEL_SOURCES[WRITING_HELP_PLUS_MODEL_KEY].display == "Writing help Plus"
     assert MODEL_SOURCES[WRITING_HELP_PLUS_MODEL_KEY].url == (
         "https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf"
     )
     assert MODEL_SOURCES[WRITING_HELP_PLUS_MODEL_KEY].size_bytes == 5_335_289_824
     assert MODEL_SOURCES[FALLBACK_WRITING_HELP_MODEL_KEY].filename == "gemma-3-1b-it-Q4_K_M.gguf"
+    assert MODEL_SOURCES[FALLBACK_WRITING_HELP_MODEL_KEY].display == "Writing help fallback"
     assert MODEL_SOURCES[FALLBACK_WRITING_HELP_MODEL_KEY].url == (
         "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf"
     )
-    assert MODEL_SOURCES[FALLBACK_WRITING_HELP_MODEL_KEY].size_bytes == 806_000_000
+    assert MODEL_SOURCES[FALLBACK_WRITING_HELP_MODEL_KEY].size_bytes == 806_058_240
     voice = MODEL_SOURCES[VOICE_REPLY_MODEL_KEY]
+    assert voice.display == "Voice replies"
     assert voice.install_dir == "kokoro-v1.0"
     assert voice.filenames == ("kokoro-v1.0.int8.onnx", "voices-v1.0.bin")
     assert voice.artifacts[0].url == (
@@ -191,6 +198,63 @@ def test_model_sources_define_required_downloads() -> None:
         "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
     )
     assert voice.size_bytes == 120_575_669
+
+
+def test_model_sources_are_pinned_for_downloads() -> None:
+    for source in MODEL_SOURCES.values():
+        for artifact in source.artifacts:
+            assert artifact.sha256 != UNPINNED_SHA256
+            assert re.fullmatch(r"[0-9a-f]{64}", artifact.sha256)
+
+
+def test_model_downloader_progress_signal_supports_real_model_sizes() -> None:
+    downloader = ModelDownloader(Path("/tmp/models"))
+    received: list[tuple[str, int, int]] = []
+    downloader.progress.connect(lambda key, done, total: received.append((key, done, total)))
+
+    downloader.progress.emit(DEFAULT_WRITING_HELP_MODEL_KEY, 4_967_494_592, 4_967_494_592)
+
+    assert received == [
+        (DEFAULT_WRITING_HELP_MODEL_KEY, 4_967_494_592, 4_967_494_592)
+    ]
+
+
+def test_model_downloader_ignores_cancel_for_stale_key(tmp_path) -> None:
+    downloader = ModelDownloader(tmp_path)
+    downloader._active_key = "active-model"
+
+    downloader.cancel("stale-model")
+    assert downloader._cancel.is_set() is False
+
+    downloader.cancel("active-model")
+    assert downloader._cancel.is_set() is True
+
+
+def test_model_downloader_uses_shared_cancel_message_constant() -> None:
+    assert DOWNLOAD_CANCELLED_MESSAGE == "Cancelled"
+
+
+def test_model_downloader_uses_explicit_ssl_context(tmp_path, monkeypatch, qapp) -> None:
+    payload = b"downloaded"
+    source = _source_for("https://example.test/ssl.bin", "ssl.bin", payload)
+    downloader = ModelDownloader(tmp_path)
+    finished: list[str] = []
+    contexts: list[object] = []
+    sentinel_context = object()
+
+    def fake_urlopen(request, timeout: int = 30, context=None):
+        assert timeout == 30
+        contexts.append(context)
+        return FakeResponse(payload, status=200)
+
+    monkeypatch.setattr(model_downloader_module, "_download_ssl_context", lambda: sentinel_context)
+    monkeypatch.setattr(model_downloader_module.urllib_request, "urlopen", fake_urlopen)
+    downloader.finished.connect(lambda key: finished.append(key))
+
+    downloader.enqueue(source)
+
+    _wait_until(lambda: finished == [source.key] and _is_idle(downloader), qapp)
+    assert contexts == [sentinel_context]
 
 
 def test_model_downloader_skips_network_for_valid_installed_file(tmp_path, monkeypatch, qapp) -> None:
@@ -214,6 +278,76 @@ def test_model_downloader_skips_network_for_valid_installed_file(tmp_path, monke
 
     _wait_until(lambda: finished == [source.key] and _is_idle(downloader), qapp)
     assert failed == []
+
+
+def test_model_downloader_rejects_unpinned_release_sources_before_network(tmp_path, monkeypatch, qapp) -> None:
+    source = ModelSource.single_file(
+        key="unpinned.bin",
+        display="unpinned.bin",
+        filename="unpinned.bin",
+        url="https://example.test/unpinned.bin",
+        sha256=UNPINNED_SHA256,
+        size_bytes=16,
+    )
+    downloader = ModelDownloader(tmp_path)
+    failed: list[tuple[str, str]] = []
+    downloader.failed.connect(lambda key, message: failed.append((key, message)))
+    monkeypatch.setattr(
+        model_downloader_module.urllib_request,
+        "urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("network should not be used")),
+    )
+
+    downloader.enqueue(source)
+
+    _wait_until(lambda: failed == [(source.key, "SHA256 not pinned for artifact 'unpinned.bin'. Release pinning is required before download.")] and _is_idle(downloader), qapp)
+
+
+def test_model_downloader_rejects_mixed_pin_bundle_before_any_network(tmp_path, monkeypatch, qapp) -> None:
+    source = ModelSource(
+        key="bundle-unpinned",
+        display="bundle-unpinned",
+        install_dir="bundle-unpinned",
+        artifacts=(
+            ModelArtifact(
+                filename="config.json",
+                url="https://example.test/bundle-unpinned/config.json",
+                sha256=_sha256_bytes(b"{}"),
+                size_bytes=2,
+            ),
+            ModelArtifact(
+                filename="model.bin",
+                url="https://example.test/bundle-unpinned/model.bin",
+                sha256=UNPINNED_SHA256,
+                size_bytes=4,
+            ),
+        ),
+    )
+    downloader = ModelDownloader(tmp_path)
+    failed: list[tuple[str, str]] = []
+    downloader.failed.connect(lambda key, message: failed.append((key, message)))
+    fake_urlopen = FakeUrlOpen(
+        {
+            source.artifacts[0].url: FakeResource(b"{}"),
+            source.artifacts[1].url: FakeResource(b"data"),
+        }
+    )
+    monkeypatch.setattr(model_downloader_module.urllib_request, "urlopen", fake_urlopen)
+
+    downloader.enqueue(source)
+
+    _wait_until(
+        lambda: failed == [
+            (
+                source.key,
+                "SHA256 not pinned for artifact 'model.bin'. Release pinning is required before download.",
+            )
+        ]
+        and _is_idle(downloader),
+        qapp,
+    )
+    assert fake_urlopen.requests == []
+    assert (tmp_path / source.install_dir).exists() is False
 
 
 def test_model_downloader_promotes_valid_partial_without_network(tmp_path, monkeypatch, qapp) -> None:

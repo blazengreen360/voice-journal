@@ -1,7 +1,7 @@
 import pytest
 
 from voicejournal.app import config as config_module
-from voicejournal.app.config import AppConfig
+from voicejournal.app.config import AppConfig, DEFAULT_SPEECH_RATE
 
 
 def test_assets_package_is_resolvable() -> None:
@@ -29,6 +29,11 @@ def test_theme_asset_supports_both_bundled_themes() -> None:
 def test_theme_asset_rejects_unknown_theme() -> None:
     with pytest.raises(ValueError, match="Unsupported theme"):
         AppConfig().theme_asset("sepia")
+
+
+def test_speech_rate_defaults_to_calm_pace() -> None:
+    assert AppConfig().speech_rate == DEFAULT_SPEECH_RATE
+    assert DEFAULT_SPEECH_RATE < 1.0
 
 
 def test_ensure_directories_resolves_all_user_paths(monkeypatch, tmp_path) -> None:

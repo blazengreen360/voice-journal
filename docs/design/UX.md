@@ -539,7 +539,8 @@ Locked behavior:
 - model rows reflect downloader state, progress, queue, cancel, retry, and
   manual placement info
 - Downloads tab exposes separate rows for the default Writing help model and
-  the optional Writing help Plus upgrade
+  the optional Writing help Plus upgrade, plus the Writing help fallback backup
+  model for recovery when the default model cannot load on a given machine
 - Audio tab gates mic meter behind `Test microphone`
 - Appearance changes live-apply
 - one dialog-level privacy footer only

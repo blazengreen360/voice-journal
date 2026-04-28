@@ -11,6 +11,7 @@ from platformdirs import PlatformDirs
 APP_NAME = "VoiceJournal"
 APP_AUTHOR = "VoiceJournal"
 THEME_NAMES = frozenset({"light", "dark"})
+DEFAULT_SPEECH_RATE = 0.9
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +39,14 @@ class AppPaths:
 class AppConfig:
     def __init__(self, app_name: str = APP_NAME, app_author: str = APP_AUTHOR) -> None:
         self._dirs = PlatformDirs(appname=app_name, appauthor=app_author, roaming=False)
+
+    @property
+    def audio_device(self) -> int | str | None:
+        return None
+
+    @property
+    def speech_rate(self) -> float:
+        return DEFAULT_SPEECH_RATE
 
     def paths(self) -> AppPaths:
         data_dir = Path(self._dirs.user_data_dir)

@@ -131,7 +131,7 @@ Modules:
 
 Acceptance:
 - Resume, cancel, hash verification, atomic install, queueing, and already-installed fast path all work.
-- Settings -> Downloads exposes separate rows for the default Writing help model and the optional Writing help Plus upgrade.
+- Settings -> Downloads exposes separate rows for the default Writing help model, the Writing help fallback backup model, and the optional Writing help Plus upgrade.
 
 5. Worker signal infrastructure
 Modules:

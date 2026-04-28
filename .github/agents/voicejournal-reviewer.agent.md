@@ -1,6 +1,7 @@
 ---
 name: "VoiceJournal Reviewer"
 description: "Use proactively after VoiceJournal code, architecture, or planning changes. Reviews code quality, architecture fit, regression risk, and missing validation without making edits."
+model:  Claude Sonnet 4.6 (copilot)
 tools: [read, search, execute, web, agent, todo, 'io.github.upstash/context7/*']
 agents: [Explore]
 handoffs:

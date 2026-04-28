@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import certifi
 import hashlib
 import json
 from pathlib import Path
@@ -16,21 +17,33 @@ def build_packaging_smoke_report() -> dict[str, object]:
     dark_theme = config.theme_asset("dark")
     model = bundled_silero_vad_model()
     read_errors: list[str] = []
+    certifi_bundle_path = Path(certifi.where())
 
     light_theme_exists = light_theme.is_file()
     dark_theme_exists = dark_theme.is_file()
     model_exists = model.is_file()
+    certifi_bundle_exists = certifi_bundle_path.is_file()
     light_theme_contains_token = _theme_contains_surface_token(light_theme, light_theme_exists, read_errors)
     dark_theme_contains_token = _theme_contains_surface_token(dark_theme, dark_theme_exists, read_errors)
     theme_exists = light_theme_exists and dark_theme_exists
     theme_contains_token = light_theme_contains_token and dark_theme_contains_token
     model_sha256 = _model_sha256(model, model_exists, read_errors)
+    if not certifi_bundle_exists:
+        read_errors.append(f"Missing certifi CA bundle at {certifi_bundle_path}")
 
     return {
-        "ok": theme_exists and theme_contains_token and model_exists and model_sha256 == SILERO_VAD_SHA256,
+        "ok": (
+            theme_exists
+            and theme_contains_token
+            and model_exists
+            and model_sha256 == SILERO_VAD_SHA256
+            and certifi_bundle_exists
+        ),
         "frozen": bool(getattr(sys, "frozen", False)),
         "executable": sys.executable,
         "assets_dir": str(assets_dir),
+        "certifi_bundle_path": str(certifi_bundle_path),
+        "certifi_bundle_exists": certifi_bundle_exists,
         "error": "; ".join(read_errors) if read_errors else None,
         "read_errors": read_errors,
         "light_theme_exists": light_theme_exists,
